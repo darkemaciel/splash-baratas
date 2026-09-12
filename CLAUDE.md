@@ -12,19 +12,34 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Input**: must use pointer events (not mouse-only), since a future mobile/touch port is anticipated even though mobile is out of scope for this MVP.
 - Target browsers: current Chrome, Firefox, Edge; desktop resolutions only.
 
-The actual game code has not been written yet — `client/src/{config,entities,scenes,systems,ui}` are currently empty scaffold directories. `prd.md` references a `constitution.md` for technical principles, but that file does not exist yet in this repo.
+Technical principles are ratified in `.specify/memory/constitution.md` (7 principles: domain/render separation, client-as-untrusted-single-layer, web-first/mobile-later via Pointer Events, deliberate MVP simplicity, non-negotiable click responsiveness, versioned assets, fixed stack).
+
+**Status: MVP implemented.** The main loop (spec `specs/001-roach-fridge-clicker/`) is fully built and all its tasks are complete:
+
+- `client/src/entities/` — `FoodItem`, `Shelf`, `Roach`, `Match` (pure TypeScript, no `phaser` import, per constitution Principle I)
+- `client/src/systems/` — `MatchStateManager` (spawn/steal/eliminate/restart, `EventTarget`-based pub-sub) and `CollisionSystem` (direct geometry hit-testing, no physics engine)
+- `client/src/scenes/` — `BootScene`, `StartScene`, `GameScene`, `GameOverScene` (Phaser), the only consumers of `systems/`
+- `client/src/config/gameConfig.ts` — fixed constants (spawn interval, travel duration, hitbox padding, shelf/food counts)
+- `client/tests/unit/` — `bun test` suite covering the domain layer in isolation
+- Placeholder sprites in `client/public/assets/sprites/`
+
+Any new feature (progressive difficulty, scoring, sound, HUD, etc. — tracked in `backlog.md`) should land as a **new spec** via `/speckit-specify`, not a retroactive edit to `specs/001-roach-fridge-clicker/`, per constitution Principle IV.
+
+## Specs
+
+Full spec-kit artifacts for the implemented feature live in `specs/001-roach-fridge-clicker/`: `spec.md` (22 functional requirements, 3 prioritized user stories, 6 success criteria), `plan.md`, `research.md`, `data-model.md`, `contracts/domain-api.md`, `quickstart.md`, `checklists/requirements.md`, and `tasks.md` (36/36 tasks done).
 
 ## Commands
 
-All commands run from `client/` (the only workspace currently in this repo):
+All commands run from `client/` (the only workspace in this repo):
 
 ```bash
 bun install          # install dependencies
-bun run index.ts     # run the current entry point (placeholder script, not the game yet)
+bun run dev          # start the Vite dev server (the actual game)
+bun run build        # production build (static output for Vercel)
+bun test             # run the unit test suite (entities/ and systems/)
 ```
-
-No build, lint, or test scripts are defined in `client/package.json` yet, and no test framework is configured. Vite is present as a dependency but no `vite.config.*` exists yet — bundler setup for the actual Phaser game is still pending.
 
 ## Notes
 
-- Repo root currently has an untracked SSH keypair (`.pub` file and its private counterpart) that appears to have been generated accidentally in the working directory rather than `~/.ssh`. These are not part of the project — do not commit them, and flag to the user if they're still present, since the private key should not end up in git history.
+- The repo root previously had an untracked SSH keypair generated accidentally in the working directory; it is no longer present. If one reappears, do not commit it and flag it to the user.
