@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "skills": {
+    "bun-runtime": {
+      "source": "affaan-m/ECC",
+      "sourceType": "github",
+      "skillPath": "skills/bun-runtime/SKILL.md",
+      "computedHash": "73b3c91579ddd2f2dd7ebcf215774ea0de07823c1fe8de4b88b3225833bfa5cd"
+    },
+    "frontend-design": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "skillPath": "skills/frontend-design/SKILL.md",
+      "computedHash": "106acf230014cbb43ca34e6410371321b56ca742f9ee0442e8ec05bf02eb0384"
+    },
+    "vite-patterns": {
+      "source": "affaan-m/ECC",
+      "sourceType": "github",
+      "skillPath": "skills/vite-patterns/SKILL.md",
+      "computedHash": "cfebf85e0290f0c71645b215c33fc47dce247263a715648de8ae4c57c370e93d"
+    }
+  }
+}
