@@ -36,8 +36,6 @@ da constitution.
 
 | Item | Descrição | Risco | Pontuação | Esforço | Prioridade |
 |---|---|---|---|---|---|
-| Destaque visual do alvo | Ao surgir, a barata aciona um highlight/glow na comida que está mirando, facilitando priorização de cliques com várias baratas em tela. Hoje o único indício é a trajetória (spec 001, FR-004). | Baixo | Alto | Baixo | **P0** |
-| Feedback sonoro (SFX) | Efeitos de eliminação de barata e de roubo de comida. MVP só tem feedback visual (FR-020). Requer popular `client/public/assets/audio/` (Princípio VI). | Baixo | Alto | Baixo | **P0** |
 | HUD de progresso/risco | Contador visível de comidas restantes/roubadas, ou barra de risco geral. Hoje o jogador só lê o estado observando as prateleiras (FR-022). | Baixo | Médio | Baixo | **P0** |
 | Juice na animação da barata | Squash/stretch e leve tremor na barata perto do alvo, para reforçar urgência visual sem mudar a lógica de domínio. | Baixo | Médio | Baixo | **P1** |
 | Pausar partida | Tecla/botão de pausa que congela `tick()` sem resetar o `Match`. Simples dado que o loop já é orientado por timestamp (`now`). | Baixo | Médio | Baixo | **P1** |

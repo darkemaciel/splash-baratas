@@ -37,12 +37,20 @@ export class GameScene extends Phaser.Scene {
   private hudText!: Phaser.GameObjects.Text;
   private hudBar!: Phaser.GameObjects.Graphics;
   private hudRiskLevel: RiskLevel | null = null;
+  /** specs/003-feedback-sonoro-sfx: estado do loop ambiente de voo (data-model.md § "Som ambiente"). */
+  private isFlyLoopActive = false;
 
   constructor() {
     super("GameScene");
   }
 
   create(): void {
+    // specs/003-feedback-sonoro-sfx (research.md §4): guarda defensiva — o SoundManager é
+    // global ao Game, não por-Scene, então um loop de uma partida anterior sobreviveria ao
+    // restart se não for parado explicitamente aqui.
+    this.sound.stopByKey("sfx-fly");
+    this.isFlyLoopActive = false;
+
     this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, "fridgeBg");
     for (const shelfY of SHELF_Y_POSITIONS) {
       this.add.image(GAME_WIDTH / 2, shelfY + 40, "shelf");
@@ -68,6 +76,10 @@ export class GameScene extends Phaser.Scene {
       matchStateManager.on("food:stolen", ({ foodItemId }) => this.playFoodStolen(foodItemId)),
       matchStateManager.on("food:stolen", () => this.updateHud(matchStateManager.getSnapshot())),
       matchStateManager.on("match:lost", () => {
+        // specs/003 (research.md §4): parar o loop ambiente antes de trocar de scene — o
+        // SoundManager é global ao Game e não para sozinho na troca de Scene.
+        this.sound.stopByKey("sfx-fly");
+        this.isFlyLoopActive = false;
         this.scene.start("GameOverScene");
       }),
     ];
@@ -85,6 +97,22 @@ export class GameScene extends Phaser.Scene {
     matchStateManager.tick(this.time.now);
     const snapshot = matchStateManager.getSnapshot();
     this.syncRoachSprites(snapshot);
+    this.syncFlyLoop(snapshot);
+  }
+
+  /**
+   * specs/003-feedback-sonoro-sfx (FR-005/FR-006/FR-007): liga/desliga o loop ambiente de voo
+   * apenas nas transições de borda (0 ↔ >0 baratas ativas), nunca a cada frame.
+   */
+  private syncFlyLoop(snapshot: MatchSnapshot): void {
+    const hasActiveRoaches = snapshot.activeRoaches.length > 0;
+    if (hasActiveRoaches && !this.isFlyLoopActive) {
+      this.sound.play("sfx-fly", { loop: true });
+      this.isFlyLoopActive = true;
+    } else if (!hasActiveRoaches && this.isFlyLoopActive) {
+      this.sound.stopByKey("sfx-fly");
+      this.isFlyLoopActive = false;
+    }
   }
 
   /**
@@ -171,11 +199,14 @@ export class GameScene extends Phaser.Scene {
     const hit = pickTopmostHit({ x: pointer.x, y: pointer.y }, candidates, HITBOX_PADDING_PX);
     if (hit) {
       matchStateManager.tryEliminateRoach(hit.id, now);
+    } else {
+      this.sound.play("sfx-miss");
     }
   }
 
-  /** FR-020: feedback visual breve de queda ao eliminar uma barata. */
+  /** FR-020: feedback visual breve de queda ao eliminar uma barata; specs/003: + som de acerto. */
   private playRoachEliminated(roachId: string): void {
+    this.sound.play("sfx-hit");
     const sprite = this.roachSprites.get(roachId);
     if (!sprite) {
       return;
@@ -190,8 +221,9 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  /** FR-020: feedback visual breve no espaço da comida ao ser roubada. */
+  /** FR-020: feedback visual breve no espaço da comida ao ser roubada; specs/003: + som de roubo. */
   private playFoodStolen(foodItemId: string): void {
+    this.sound.play("sfx-steal");
     const sprite = this.foodSprites.get(foodItemId);
     if (!sprite) {
       return;
