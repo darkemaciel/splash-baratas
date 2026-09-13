@@ -4,11 +4,15 @@ import {
   createMatch,
   findFoodItem,
   findRoach,
+  foodRemainingCount,
+  foodTotalCount,
   presentFoodItemsWithoutActiveRoach,
   removeRoach,
+  riskLevel,
   shelfIndexFromId,
   type Match,
   type MatchStatus,
+  type RiskLevel,
 } from "../entities/Match";
 import { markStolen, type FoodItem } from "../entities/FoodItem";
 import {
@@ -25,6 +29,10 @@ export interface MatchSnapshot {
   readonly foodItems: ReadonlyArray<Readonly<FoodItem>>;
   readonly activeRoaches: ReadonlyArray<Readonly<Roach>>;
   readonly status: MatchStatus;
+  /** HUD de progresso/risco (specs/002-hud-progresso-risco): nunca um valor fixo, sempre recontado. */
+  readonly foodRemainingCount: number;
+  readonly foodTotalCount: number;
+  readonly riskLevel: RiskLevel;
 }
 
 export type MatchEventName =
@@ -58,6 +66,9 @@ export class MatchStateManager {
       foodItems: this.match.foodItems.map((item) => ({ ...item })),
       activeRoaches: this.match.activeRoaches.map((roach) => ({ ...roach })),
       status: this.match.status,
+      foodRemainingCount: foodRemainingCount(this.match),
+      foodTotalCount: foodTotalCount(this.match),
+      riskLevel: riskLevel(this.match),
     };
   }
 

@@ -58,6 +58,32 @@ export function allFoodStolen(match: Match): boolean {
   return match.foodItems.every((item) => item.state === "stolen");
 }
 
+export type RiskLevel = "safe" | "elevated" | "critical";
+
+/** FR-002 (HUD): total real de comidas da partida corrente — nunca um valor fixo. */
+export function foodTotalCount(match: Match): number {
+  return match.foodItems.length;
+}
+
+/** FR-002/FR-003 (HUD): comidas ainda presentes, recontadas a cada leitura para nunca divergir do estado real. */
+export function foodRemainingCount(match: Match): number {
+  return match.foodItems.filter((item) => item.state === "present").length;
+}
+
+/**
+ * FR-005 (HUD): três níveis de risco visual. 'critical' tem prioridade sobre a proporção quando
+ * resta exatamente uma comida; caso contrário o limiar é a proporção de comidas restantes.
+ */
+export function riskLevel(match: Match): RiskLevel {
+  const remaining = foodRemainingCount(match);
+  if (remaining === 1) {
+    return "critical";
+  }
+  const total = foodTotalCount(match);
+  const ratio = total === 0 ? 0 : remaining / total;
+  return ratio > 0.5 ? "safe" : "elevated";
+}
+
 export function removeRoach(match: Match, roachId: string): void {
   match.activeRoaches = match.activeRoaches.filter((roach) => roach.id !== roachId);
 }
