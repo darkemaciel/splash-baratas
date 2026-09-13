@@ -11,6 +11,18 @@ export class BootScene extends Phaser.Scene {
     super("BootScene");
   }
 
+  /**
+   * specs/003-feedback-sonoro-sfx: única scene que carrega assets de áudio. `walk.mp3`
+   * deliberadamente NÃO é carregado aqui — reservado para uma futura feature de locomoção
+   * "andando" ainda não especificada (FR-011, contracts/audio-triggers.md).
+   */
+  preload(): void {
+    this.load.audio("sfx-hit", "assets/audio/hit.mp3");
+    this.load.audio("sfx-miss", "assets/audio/miss.mp3");
+    this.load.audio("sfx-steal", "assets/audio/steal.mp3");
+    this.load.audio("sfx-fly", "assets/audio/fly.mp3");
+  }
+
   create(): void {
     this.generatePlaceholderTextures();
     this.scene.start("StartScene");
