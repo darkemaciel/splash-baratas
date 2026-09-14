@@ -21,6 +21,16 @@ export class GameOverScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
+    // specs/004-sistema-pontuacao (FR-010): pontuação final preservada, entre a mensagem de
+    // derrota e o botão "Reiniciar".
+    const { score } = matchStateManager.getSnapshot();
+    this.add
+      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2, `Pontuação final: ${score}`, {
+        fontSize: "24px",
+        color: "#ffffff",
+      })
+      .setOrigin(0.5);
+
     const button = this.add
       .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 60, "Reiniciar", {
         fontSize: "28px",

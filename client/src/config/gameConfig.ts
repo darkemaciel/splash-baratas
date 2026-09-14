@@ -45,6 +45,26 @@ export function foodItemPosition(shelfIndex: number, slotIndex: number): Point {
   return { x, y };
 }
 
+// specs/004-sistema-pontuacao (data-model.md § "Constantes de balanceamento"): pontuação base,
+// bônus de velocidade de reação em faixas fixas, e bônus/janela de combo.
+export interface ReactionBonusTier {
+  maxMs: number;
+  bonus: number;
+}
+
+export const SCORE_BASE_POINTS = 100;
+export const REACTION_BONUS_TIERS: readonly ReactionBonusTier[] = [
+  { maxMs: 500, bonus: 50 },
+  { maxMs: 1000, bonus: 25 },
+  { maxMs: 1500, bonus: 10 },
+];
+export const COMBO_BONUS_STEP_POINTS = 25;
+// 3000ms (não 2000ms): com SPAWN_INTERVAL_MS=2500 e TRAVEL_DURATION_MS=3000, o intervalo mínimo
+// entre "última eliminação de uma leva de baratas" e "primeira eliminação da próxima leva" é de
+// ~2000ms (2 * SPAWN_INTERVAL_MS - TRAVEL_DURATION_MS) — com a janela igual a esse mínimo, um
+// combo de 3+ só seria alcançável com precisão de milissegundo. 3000ms dá folga real ao jogador.
+export const COMBO_WINDOW_MS = 3000;
+
 export function nearestSpawnPoint(target: Point): Point {
   let nearest = SPAWN_POINTS[0]!;
   let nearestDistSq = Infinity;

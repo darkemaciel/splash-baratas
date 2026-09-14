@@ -20,6 +20,8 @@ const HUD_BAR_WIDTH = 200;
 const HUD_BAR_HEIGHT = 10;
 const HUD_BAR_Y = 34;
 const HUD_BAR_TRACK_COLOR = 0x333333;
+// specs/004-sistema-pontuacao (research.md §7): pontuação logo abaixo da barra de risco.
+const SCORE_TEXT_Y = HUD_BAR_Y + HUD_BAR_HEIGHT + 8;
 const HUD_RISK_COLORS: Record<RiskLevel, number> = {
   safe: 0x2ecc71,
   elevated: 0xf1c40f,
@@ -37,6 +39,8 @@ export class GameScene extends Phaser.Scene {
   private hudText!: Phaser.GameObjects.Text;
   private hudBar!: Phaser.GameObjects.Graphics;
   private hudRiskLevel: RiskLevel | null = null;
+  /** specs/004-sistema-pontuacao: texto de pontuação, junto ao HUD de progresso/risco. */
+  private scoreText!: Phaser.GameObjects.Text;
   /** specs/003-feedback-sonoro-sfx: estado do loop ambiente de voo (data-model.md § "Som ambiente"). */
   private isFlyLoopActive = false;
 
@@ -71,8 +75,14 @@ export class GameScene extends Phaser.Scene {
     this.hudRiskLevel = null;
     this.updateHud(snapshot);
 
+    this.scoreText = this.add
+      .text(GAME_WIDTH / 2, SCORE_TEXT_Y, "", { fontSize: "16px", color: "#000000" })
+      .setOrigin(0.5, 0);
+    this.updateScore(snapshot);
+
     this.unsubscribers = [
       matchStateManager.on("roach:eliminated", ({ roachId }) => this.playRoachEliminated(roachId)),
+      matchStateManager.on("roach:eliminated", () => this.updateScore(matchStateManager.getSnapshot())),
       matchStateManager.on("food:stolen", ({ foodItemId }) => this.playFoodStolen(foodItemId)),
       matchStateManager.on("food:stolen", () => this.updateHud(matchStateManager.getSnapshot())),
       matchStateManager.on("match:lost", () => {
@@ -124,6 +134,11 @@ export class GameScene extends Phaser.Scene {
     this.hudText.setText(`${snapshot.foodRemainingCount} / ${snapshot.foodTotalCount}`);
     this.hudRiskLevel = snapshot.riskLevel;
     this.redrawHudBar(snapshot);
+  }
+
+  /** specs/004-sistema-pontuacao (FR-009): pontuação atualizada por evento, não por frame. */
+  private updateScore(snapshot: MatchSnapshot): void {
+    this.scoreText.setText(`Pontuação: ${snapshot.score}`);
   }
 
   /** FR-002/FR-005 (HUD): largura proporcional a comidas restantes; cor por nível de risco. */
@@ -200,6 +215,7 @@ export class GameScene extends Phaser.Scene {
     if (hit) {
       matchStateManager.tryEliminateRoach(hit.id, now);
     } else {
+      matchStateManager.registerMissedClick(); // specs/004-sistema-pontuacao (FR-008b)
       this.sound.play("sfx-miss");
     }
   }
