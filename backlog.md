@@ -36,7 +36,7 @@ da constitution.
 
 | Item | Descrição | Risco | Pontuação | Esforço | Prioridade |
 |---|---|---|---|---|---|
-| HUD de progresso/risco | Contador visível de comidas restantes/roubadas, ou barra de risco geral. Hoje o jogador só lê o estado observando as prateleiras (FR-022). | Baixo | Médio | Baixo | **P0** |
+| HUD de progresso/risco | Contador visível de comidas restantes/roubadas, ou barra de risco geral. Hoje o jogador só lê o estado observando as prateleiras (FR-022). | Baixo | Médio | Baixo | ✅ **Entregue** |
 | Juice na animação da barata | Squash/stretch e leve tremor na barata perto do alvo, para reforçar urgência visual sem mudar a lógica de domínio. | Baixo | Médio | Baixo | **P1** |
 | Pausar partida | Tecla/botão de pausa que congela `tick()` sem resetar o `Match`. Simples dado que o loop já é orientado por timestamp (`now`). | Baixo | Médio | Baixo | **P1** |
 | Variação nos pontos de spawn | Baratas surgindo de múltiplos pontos/padrões, não só os 4 pontos fixos hoje (`SPAWN_POINTS`, FR-005). | Baixo | Baixo | Baixo | **P2** |
@@ -46,7 +46,7 @@ da constitution.
 | Item | Descrição | Risco | Pontuação | Esforço | Prioridade |
 |---|---|---|---|---|---|
 | High score local | Melhor tempo de sobrevivência ou nº de comidas salvas, persistido em `localStorage` (sem backend). Base para qualquer modo competitivo futuro. | Baixo | Médio | Baixo | **P0** |
-| Sistema de pontuação | Pontos por barata eliminada, bônus por velocidade de reação, combos. Fora do MVP por decisão explícita do PRD (FR-019). | Médio | Alto | Médio | **P1** |
+| Sistema de pontuação | Pontos por barata eliminada, com bônus por velocidade de reação e combos. Fora do MVP por decisão explícita do PRD (FR-019). | Médio | Alto | Médio | **P1** |
 | Dificuldade progressiva | Aumento gradual de `SPAWN_INTERVAL_MS`/`TRAVEL_DURATION_MS` ao longo da partida. Hoje são constantes fixas e únicas (Princípio IV, FR-016) — a mudança precisa ser cuidadosa para não virar estado mutável espalhado pelo domínio. | Médio | Alto | Médio | **P1** |
 | Teto de baratas simultâneas configurável | Hoje o limite implícito é uma barata por comida presente (FR-021); um teto artificial menor permitiria tunar ritmo/dificuldade sem depender do nº de comidas. | Baixo | Médio | Baixo | **P1** |
 | Modo sobrevivência/infinito | Sem condição de derrota fixa por "todas roubadas" — objetivo passa a ser aguentar o máximo de tempo/ondas. Depende de dificuldade progressiva para ter graça. | Médio | Alto | Médio | **P2** |
@@ -57,6 +57,8 @@ da constitution.
 | Item | Descrição | Risco | Pontuação | Esforço | Prioridade |
 |---|---|---|---|---|---|
 | Mute/volume toggle | Controle simples de áudio, dependente do item de SFX acima existir primeiro. | Baixo | Médio | Baixo | **P0** (após SFX) |
+| Responsividade para celular | Adequar canvas, prateleiras e HUD a telas pequenas/mobile — mesmo com mobile fora do escopo funcional do MVP, a tela precisa se adaptar em vez de quebrar. Sobrepõe e adianta o "Layout responsivo para touch" da seção 4. | Médio | Alto | Médio | **P0** |
+| Ajuste na HUD | Refino de posicionamento, legibilidade e contraste do HUD de progresso/risco recém-entregue (seção 1), com base no uso real e na nova pontuação por barata morta. | Baixo | Médio | Baixo | **P0** |
 | Modo de alto contraste / daltônico | Paleta alternativa para reforçar contraste barata/comida/fundo, além do já exigido pelo NFR de acessibilidade do PRD (seção 6). WCAG completo continua fora de escopo. | Baixo | Médio | Baixo | **P1** |
 | Tutorial/onboarding na primeira partida | Overlay curto explicando o objetivo antes do primeiro spawn — ajuda a bater a métrica de 80% de conclusão do loop principal (PRD seção 2). | Baixo | Alto | Médio | **P1** |
 | Suporte a teclado para menus | Navegação por teclado nas telas de início/fim (não afeta o clique em jogo, que continua sendo o core via Pointer Events). | Baixo | Baixo | Baixo | **P3** |
@@ -65,7 +67,7 @@ da constitution.
 
 | Item | Descrição | Risco | Pontuação | Esforço | Prioridade |
 |---|---|---|---|---|---|
-| Layout responsivo para touch | Canvas escalável e reposicionamento de prateleiras/HUD para telas pequenas. A arquitetura de input já é compatível via Pointer Events (Princípio III), mas UX mobile dedicada foi explicitamente adiada. | Médio | Alto | Alto | **P2** |
+| Layout responsivo para touch | Interações e hitboxes otimizadas para toque real, além da adaptação básica de tela já promovida a P0 ("Responsividade para celular", seção 3). A arquitetura de input já é compatível via Pointer Events (Princípio III), mas UX mobile dedicada foi explicitamente adiada. | Médio | Alto | Alto | **P2** |
 | Testes em dispositivo touch real | Validar hitbox e responsividade de clique (Princípio V) em touch real, não só emulação de browser. | Médio | Médio | Médio | **P2** |
 | PWA instalável/offline | Manifest + service worker para "instalar" o jogo e jogar offline, aproveitando que já é 100% client-side. | Baixo | Médio | Médio | **P3** |
 
