@@ -1,5 +1,6 @@
 import {
   allFoodStolen,
+  applyEliminationScore,
   createEmptyMatch,
   createMatch,
   findFoodItem,
@@ -8,6 +9,7 @@ import {
   foodTotalCount,
   presentFoodItemsWithoutActiveRoach,
   removeRoach,
+  resetComboStreak,
   riskLevel,
   shelfIndexFromId,
   type Match,
@@ -33,6 +35,8 @@ export interface MatchSnapshot {
   readonly foodRemainingCount: number;
   readonly foodTotalCount: number;
   readonly riskLevel: RiskLevel;
+  /** specs/004-sistema-pontuacao: cópia direta de match.score, não derivado (FR-001). */
+  readonly score: number;
 }
 
 export type MatchEventName =
@@ -69,6 +73,7 @@ export class MatchStateManager {
       foodRemainingCount: foodRemainingCount(this.match),
       foodTotalCount: foodTotalCount(this.match),
       riskLevel: riskLevel(this.match),
+      score: this.match.score,
     };
   }
 
@@ -132,6 +137,7 @@ export class MatchStateManager {
           markStolen(foodItem);
         }
         removeRoach(this.match, roach.id);
+        resetComboStreak(this.match); // FR-008a: qualquer roubo reinicia o combo, incondicionalmente
         this.emit("food:stolen", { foodItemId: roach.targetFoodItemId });
 
         if (allFoodStolen(this.match)) {
@@ -158,10 +164,16 @@ export class MatchStateManager {
     }
     const eliminated = eliminate(roach);
     if (eliminated) {
+      applyEliminationScore(this.match, clientTimestamp, roach.spawnedAt);
       removeRoach(this.match, roachId);
       this.emit("roach:eliminated", { roachId });
     }
     return eliminated;
+  }
+
+  /** specs/004-sistema-pontuacao (FR-008b): clique sem acertar nenhuma barata reinicia o combo. */
+  registerMissedClick(): void {
+    resetComboStreak(this.match);
   }
 }
 

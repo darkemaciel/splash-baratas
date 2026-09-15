@@ -16,7 +16,15 @@ function matchWithRemaining(total: number, remaining: number): Match {
   for (let i = 0; i < total - remaining; i++) {
     markStolen(foodItems[i]!);
   }
-  return { shelves: [], foodItems, activeRoaches: [], status: "playing" };
+  return {
+    shelves: [],
+    foodItems,
+    activeRoaches: [],
+    status: "playing",
+    score: 0,
+    comboStreak: 0,
+    lastEliminationAt: null,
+  };
 }
 
 describe("HUD de progresso/risco — contagem (FR-002, FR-003, FR-004)", () => {

@@ -1,7 +1,9 @@
 {
   "compilerOptions": {
     // Environment setup & latest features
-    "lib": ["ESNext"],
+    // "DOM" added by specs/005-hud-vida-vertical (BootScene needs `document.fonts` — the Font
+    // Loading API — to gate the cartoon HUD font; no prior client code used browser globals).
+    "lib": ["ESNext", "DOM"],
     "target": "ESNext",
     "module": "Preserve",
     "moduleDetection": "force",

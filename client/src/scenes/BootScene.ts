@@ -23,9 +23,23 @@ export class BootScene extends Phaser.Scene {
     this.load.audio("sfx-fly", "assets/audio/fly.mp3");
   }
 
-  create(): void {
+  async create(): Promise<void> {
     this.generatePlaceholderTextures();
+    await this.loadHudFont();
     this.scene.start("StartScene");
+  }
+
+  /**
+   * specs/005-hud-vida-vertical (research.md §3): garante que a fonte "Fredoka" (@font-face em
+   * index.html) já esteja pronta antes de qualquer Scene de gameplay criar texto — Phaser
+   * desenha texto em canvas, que não reflui sozinho se a fonte trocar depois do primeiro
+   * render. Teto de 1s: se a fonte não carregar a tempo, o jogo segue com a pilha de fallback
+   * CSS em vez de travar o boot.
+   */
+  private async loadHudFont(): Promise<void> {
+    const fontReady = document.fonts.load('bold 28px "Fredoka"').then(() => undefined);
+    const timeout = new Promise<void>((resolve) => setTimeout(resolve, 1000));
+    await Promise.race([fontReady, timeout]);
   }
 
   private generatePlaceholderTextures(): void {
