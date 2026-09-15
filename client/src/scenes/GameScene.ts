@@ -14,19 +14,34 @@ import type { FoodItem } from "../entities/FoodItem";
 import { pickTopmostHit, type RoachHitTestInput } from "../systems/CollisionSystem";
 import { matchStateManager, type MatchSnapshot } from "../systems/MatchStateManager";
 
-// specs/002-hud-progresso-risco: barra de risco posicionada no topo, acima das prateleiras
-// (SHELF_Y_POSITIONS[0] - 40 = 120), sem sobrepor comidas/baratas (FR-007, research.md §4).
-const HUD_BAR_WIDTH = 200;
-const HUD_BAR_HEIGHT = 10;
-const HUD_BAR_Y = 34;
+// specs/005-hud-vida-vertical (research.md §2) + ajuste manual (feedback do usuário, teste em
+// dispositivo, 2026-09-15): vida + barra no canto superior direito, o mais próximo possível das
+// bordas; barra sempre centralizada horizontalmente sob a vida (mesma fórmula de x). Margens bem
+// menores que antes de propósito — "bem no canto" — ainda sem sobrepor a prateleira superior
+// (borda direita em x=900 — GameScene: shelf de largura GAME_WIDTH-120 centralizado em
+// GAME_WIDTH/2), já que o HUD fica à direita da prateleira em qualquer margem razoável.
+const HUD_MARGIN_TOP = 8;
+const HUD_MARGIN_RIGHT = 12;
+const HUD_BAR_THICKNESS = 16;
+const HUD_BAR_LENGTH = 160;
+const HUD_LIFE_COUNTER_Y = HUD_MARGIN_TOP;
+const HUD_BAR_TOP_Y = HUD_LIFE_COUNTER_Y + 24;
 const HUD_BAR_TRACK_COLOR = 0x333333;
-// specs/004-sistema-pontuacao (research.md §7): pontuação logo abaixo da barra de risco.
-const SCORE_TEXT_Y = HUD_BAR_Y + HUD_BAR_HEIGHT + 8;
 const HUD_RISK_COLORS: Record<RiskLevel, number> = {
   safe: 0x2ecc71,
   elevated: 0xf1c40f,
   critical: 0xe74c3c,
 };
+// specs/005-hud-vida-vertical (FR-006, FR-007, FR-008, data-model.md § "Constantes de
+// apresentação"): fonte cartunesca compartilhada por todo o HUD.
+const HUD_FONT_FAMILY = '"Fredoka", "Comic Sans MS", cursive, sans-serif';
+const HUD_FONT_SIZE_PX = 18;
+// Score à esquerda da vida, na mesma linha, com espaçamento fixo entre os dois textos. Âncora
+// origin(1, 0) (borda direita fixa) em vez de centralizado: conforme a pontuação ganha dígitos,
+// o texto cresce só para a esquerda, nunca "furando" a borda direita da tela nem invadindo a
+// vida/barra — a posição x é recalculada a cada atualização a partir da borda esquerda real do
+// texto de vida (this.hudText), não de um valor fixo.
+const HUD_SCORE_GAP = 12;
 
 /**
  * Única scene que lê `MatchStateManager.getSnapshot()`/chama `tick()` a cada frame e traduz o
@@ -69,15 +84,23 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.hudText = this.add
-      .text(GAME_WIDTH / 2, 12, "", { fontSize: "18px", color: "#000000" })
+      .text(GAME_WIDTH - HUD_MARGIN_RIGHT - HUD_BAR_THICKNESS / 2, HUD_LIFE_COUNTER_Y, "", {
+        fontSize: `${HUD_FONT_SIZE_PX}px`,
+        fontFamily: HUD_FONT_FAMILY,
+        color: "#000000",
+      })
       .setOrigin(0.5, 0);
     this.hudBar = this.add.graphics();
     this.hudRiskLevel = null;
     this.updateHud(snapshot);
 
     this.scoreText = this.add
-      .text(GAME_WIDTH / 2, SCORE_TEXT_Y, "", { fontSize: "16px", color: "#000000" })
-      .setOrigin(0.5, 0);
+      .text(0, HUD_LIFE_COUNTER_Y, "", {
+        fontSize: `${HUD_FONT_SIZE_PX}px`,
+        fontFamily: HUD_FONT_FAMILY,
+        color: "#000000",
+      })
+      .setOrigin(1, 0);
     this.updateScore(snapshot);
 
     this.unsubscribers = [
@@ -136,21 +159,37 @@ export class GameScene extends Phaser.Scene {
     this.redrawHudBar(snapshot);
   }
 
-  /** specs/004-sistema-pontuacao (FR-009): pontuação atualizada por evento, não por frame. */
+  /**
+   * specs/004-sistema-pontuacao (FR-009): pontuação atualizada por evento, não por frame.
+   * A posição x é recalculada a cada troca de texto: com origin(1, 0), o texto cresce para a
+   * esquerda a partir de uma borda direita fixa (borda esquerda real de `hudText`, menos
+   * HUD_SCORE_GAP) — impede que a pontuação "fure" a borda da tela ao ganhar dígitos.
+   */
   private updateScore(snapshot: MatchSnapshot): void {
-    this.scoreText.setText(`Pontuação: ${snapshot.score}`);
+    this.scoreText.setText(`SCORE: ${snapshot.score}`);
+    this.scoreText.setX(this.hudText.x - this.hudText.width / 2 - HUD_SCORE_GAP);
   }
 
-  /** FR-002/FR-005 (HUD): largura proporcional a comidas restantes; cor por nível de risco. */
+  /**
+   * specs/005-hud-vida-vertical (FR-002, research.md §1): barra vertical, preenchimento
+   * contínuo da base para o topo — altura proporcional a comidas restantes; cor por nível de
+   * risco (mesmo esquema de FR-002/FR-005 do spec 002-hud-progresso-risco).
+   */
   private redrawHudBar(snapshot: MatchSnapshot): void {
-    const x = GAME_WIDTH / 2 - HUD_BAR_WIDTH / 2;
+    const x = GAME_WIDTH - HUD_MARGIN_RIGHT - HUD_BAR_THICKNESS;
     const ratio =
       snapshot.foodTotalCount === 0 ? 0 : snapshot.foodRemainingCount / snapshot.foodTotalCount;
+    const filledHeight = HUD_BAR_LENGTH * ratio;
     this.hudBar.clear();
     this.hudBar.fillStyle(HUD_BAR_TRACK_COLOR, 1);
-    this.hudBar.fillRect(x, HUD_BAR_Y, HUD_BAR_WIDTH, HUD_BAR_HEIGHT);
+    this.hudBar.fillRect(x, HUD_BAR_TOP_Y, HUD_BAR_THICKNESS, HUD_BAR_LENGTH);
     this.hudBar.fillStyle(HUD_RISK_COLORS[snapshot.riskLevel], 1);
-    this.hudBar.fillRect(x, HUD_BAR_Y, HUD_BAR_WIDTH * ratio, HUD_BAR_HEIGHT);
+    this.hudBar.fillRect(
+      x,
+      HUD_BAR_TOP_Y + (HUD_BAR_LENGTH - filledHeight),
+      HUD_BAR_THICKNESS,
+      filledHeight,
+    );
   }
 
   private createFoodSprite(foodItem: FoodItem): void {

@@ -5,14 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Baratas na Geladeira</title>
     <style>
+      /* specs/005-hud-vida-vertical (research.md §3): fonte cartunesca do HUD, self-hosted
+         (Princípio VI). font-weight: 700 casa com o document.fonts.load('bold ...') em
+         BootScene — sem isso o gate de carregamento não encontra a face registrada. */
+      @font-face {
+        font-family: "Fredoka";
+        src: url("/assets/fonts/Fredoka-Bold.woff2") format("woff2");
+        font-weight: 700;
+        font-style: normal;
+        font-display: swap;
+      }
+
       html, body {
         margin: 0;
         padding: 0;
+        width: 100%;
+        height: 100%;
         background: #0d0d0d;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 100vh;
+        overflow-x: auto;
+      }
+
+      #game {
+        width: 100%;
+        height: 100%;
+        background: #0d0d0d;
       }
     </style>
   </head>

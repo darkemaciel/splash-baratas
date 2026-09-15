@@ -14,5 +14,13 @@ new Phaser.Game({
   width: GAME_WIDTH,
   height: GAME_HEIGHT,
   backgroundColor: "#0d0d0d",
+  scale: {
+    mode: Phaser.Scale.FIT,
+    autoCenter: Phaser.Scale.CENTER_BOTH,
+    // specs/006-responsividade-mobile (FR-006): piso de 320px de largura, com a altura mínima
+    // derivada da proporção de GAME_WIDTH/GAME_HEIGHT ativa (landscape ou portrait) em vez de um
+    // valor fixo — do contrário o piso de altura ficaria errado na base portrait.
+    min: { width: 320, height: Math.round((320 * GAME_HEIGHT) / GAME_WIDTH) },
+  },
   scene: [BootScene, StartScene, GameScene, GameOverScene],
 });
