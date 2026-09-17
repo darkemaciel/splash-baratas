@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { GAME_HEIGHT, GAME_WIDTH, UI_SCALE } from "../config/gameConfig";
+import { elapsedMs, formatElapsedTime } from "../entities/Match";
 import { matchStateManager } from "../systems/MatchStateManager";
 
 /**
@@ -16,16 +17,31 @@ export class GameOverScene extends Phaser.Scene {
     // specs/006-responsividade-mobile (FR-007): tamanhos fixos em px cortavam a mensagem na base
     // portrait (480px de largura) — escala junto com UI_SCALE em vez de valores fixos únicos.
     this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 60, "Todas as comidas foram roubadas!\nVocê perdeu.", {
+      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 90, "Todas as comidas foram roubadas!\nVocê perdeu.", {
         fontSize: `${Math.round(32 * UI_SCALE)}px`,
         color: "#ffffff",
         align: "center",
       })
       .setOrigin(0.5);
 
-    // specs/004-sistema-pontuacao (FR-010): pontuação final preservada, entre a mensagem de
-    // derrota e o botão "Reiniciar".
-    const { score } = matchStateManager.getSnapshot();
+    // specs/007-tempo-de-sobrevivencia (FR-005): tempo de sobrevivência final, já congelado
+    // (endedAt definido) no snapshot lido abaixo — o `now` passado a elapsedMs é ignorado.
+    const snapshot = matchStateManager.getSnapshot();
+    this.add
+      .text(
+        GAME_WIDTH / 2,
+        GAME_HEIGHT / 2 - 45,
+        `Tempo de sobrevivência: ${formatElapsedTime(elapsedMs(snapshot, this.time.now))}`,
+        {
+          fontSize: `${Math.round(24 * UI_SCALE)}px`,
+          color: "#ffffff",
+        },
+      )
+      .setOrigin(0.5);
+
+    // specs/004-sistema-pontuacao (FR-010): pontuação final preservada, entre o tempo de
+    // sobrevivência e o botão "Reiniciar".
+    const { score } = snapshot;
     this.add
       .text(GAME_WIDTH / 2, GAME_HEIGHT / 2, `Pontuação final: ${score}`, {
         fontSize: `${Math.round(24 * UI_SCALE)}px`,
@@ -34,7 +50,7 @@ export class GameOverScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     const button = this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 60, "Reiniciar", {
+      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 55, "Reiniciar", {
         fontSize: `${Math.round(28 * UI_SCALE)}px`,
         color: "#ffffff",
         backgroundColor: "#e76f51",

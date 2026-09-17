@@ -45,6 +45,7 @@ da constitution.
 
 | Item | Descrição | Risco | Pontuação | Esforço | Prioridade |
 |---|---|---|---|---|---|
+| Cronômetro de tempo de sobrevivência | Cronômetro visível durante a partida, marcando o tempo decorrido desde o início; para quando a partida termina e reinicia em uma nova partida. Primeiro passo da progressão, sem pontuação, dificuldade progressiva ou persistência de recorde ainda. Entregue via `specs/007-tempo-de-sobrevivencia`: HUD centralizado no topo da tela. | Baixo | Alto | Baixo | ✅ **Entregue** |
 | High score local | Melhor tempo de sobrevivência ou nº de comidas salvas, persistido em `localStorage` (sem backend). Base para qualquer modo competitivo futuro. | Baixo | Médio | Baixo | **P0** |
 | Sistema de pontuação | Pontos por barata eliminada, com bônus por velocidade de reação e combos. Fora do MVP por decisão explícita do PRD (FR-019). | Médio | Alto | Médio | **P1** |
 | Dificuldade progressiva | Aumento gradual de `SPAWN_INTERVAL_MS`/`TRAVEL_DURATION_MS` ao longo da partida. Hoje são constantes fixas e únicas (Princípio IV, FR-016) — a mudança precisa ser cuidadosa para não virar estado mutável espalhado pelo domínio. | Médio | Alto | Médio | **P1** |

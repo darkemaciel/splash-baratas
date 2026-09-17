@@ -23,9 +23,13 @@ export interface Match {
   comboStreak: number;
   /** specs/004-sistema-pontuacao: timestamp da última eliminação pontuada, para detectar estouro da janela de combo (FR-008c). */
   lastEliminationAt: number | null;
+  /** specs/007-tempo-de-sobrevivencia: timestamp de início da partida corrente (FR-002). */
+  startedAt: number;
+  /** specs/007-tempo-de-sobrevivencia: timestamp da derrota; `null` enquanto a partida não termina (FR-004). */
+  endedAt: number | null;
 }
 
-export function createMatch(): Match {
+export function createMatch(now: number = Date.now()): Match {
   const shelves: Shelf[] = [];
   const foodItems: FoodItem[] = [];
 
@@ -48,6 +52,8 @@ export function createMatch(): Match {
     score: 0,
     comboStreak: 0,
     lastEliminationAt: null,
+    startedAt: now,
+    endedAt: null,
   };
 }
 
@@ -60,6 +66,8 @@ export function createEmptyMatch(): Match {
     score: 0,
     comboStreak: 0,
     lastEliminationAt: null,
+    startedAt: 0,
+    endedAt: null,
   };
 }
 
@@ -156,6 +164,28 @@ export function comboBonusPoints(comboStreakAfterIncrement: number): number {
 /** specs/004-sistema-pontuacao (FR-008): reinicia a sequência de combo sem afetar score/lastEliminationAt. */
 export function resetComboStreak(match: Match): void {
   match.comboStreak = 0;
+}
+
+/**
+ * specs/007-tempo-de-sobrevivencia (data-model.md § "Funções puras adicionadas"): tempo decorrido
+ * desde o início da partida. Uma vez que `endedAt` deixa de ser `null`, o valor retornado ignora
+ * `now` e passa a ser sempre o mesmo (FR-005 — tempo final estático).
+ */
+export function elapsedMs(match: Pick<Match, "startedAt" | "endedAt">, now: number): number {
+  const end = match.endedAt ?? now;
+  return Math.max(0, end - match.startedAt);
+}
+
+/**
+ * specs/007-tempo-de-sobrevivencia (research.md §6): sempre "MM:SS", zero-padded, sem rollover
+ * para horas — cobre "dezenas de minutos" (Edge Case da spec, FR-008) sem introduzir uma terceira
+ * unidade.
+ */
+export function formatElapsedTime(ms: number): string {
+  const totalSeconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
 export function applyEliminationScore(match: Match, now: number, spawnedAt: number): number {
