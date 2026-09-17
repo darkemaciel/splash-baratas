@@ -9,7 +9,7 @@ import {
   type Point,
 } from "../config/gameConfig";
 import { elapsedMs, formatElapsedTime, shelfIndexFromId, type RiskLevel } from "../entities/Match";
-import { positionAt } from "../entities/Roach";
+import { positionAt, progress, type Roach } from "../entities/Roach";
 import type { FoodItem } from "../entities/FoodItem";
 import { pickTopmostHit, type RoachHitTestInput } from "../systems/CollisionSystem";
 import { matchStateManager, type MatchSnapshot } from "../systems/MatchStateManager";
@@ -42,6 +42,16 @@ const HUD_FONT_SIZE_PX = 18;
 // vida/barra — a posição x é recalculada a cada atualização a partir da borda esquerda real do
 // texto de vida (this.hudText), não de um valor fixo.
 const HUD_SCORE_GAP = 12;
+
+// specs/008-juice-animacao-barata (contracts/roach-juice-effect.md § "Constantes do efeito"):
+// squash/stretch + tremor puramente visuais, escalados por `progress(roach, now)` — zero no
+// spawn, máximo ao alcançar o alvo. `TREMOR_MAX_OFFSET_PX` fica abaixo de `HITBOX_PADDING_PX`
+// (6px) de propósito, para nunca degradar a precisão real de clique (Princípio V).
+const SQUASH_STRETCH_MAX_DELTA = 0.18;
+const SQUASH_STRETCH_FREQUENCY_HZ = 4;
+const TREMOR_MAX_OFFSET_PX = 4;
+const TREMOR_BASE_FREQUENCY_HZ = 6;
+const TREMOR_MAX_FREQUENCY_HZ = 14;
 
 /**
  * Única scene que lê `MatchStateManager.getSnapshot()`/chama `tick()` a cada frame e traduz o
@@ -236,6 +246,47 @@ export class GameScene extends Phaser.Scene {
     return foodItemPosition(shelfIndexFromId(foodItem.shelfId), foodItem.slotIndex);
   }
 
+  /**
+   * specs/008-juice-animacao-barata (research.md §5): fase determinística derivada de `roach.id`,
+   * usada para dessincronizar squash/stretch e tremor entre baratas diferentes — nenhum estado
+   * novo é guardado (Princípio II), a fase é recalculada a cada chamada a partir do próprio id.
+   */
+  private roachPhase(roachId: string): number {
+    let sum = 0;
+    for (let i = 0; i < roachId.length; i += 1) {
+      sum += roachId.codePointAt(i) ?? 0;
+    }
+    return (sum % 1000) * ((2 * Math.PI) / 1000);
+  }
+
+  /**
+   * specs/008-juice-animacao-barata (research.md §3): deformação de escala puramente visual —
+   * amplitude cresce linearmente com `progress` (zero no spawn), frequência fixa.
+   */
+  private computeRoachSquashStretch(roach: Roach, now: number): { scaleX: number; scaleY: number } {
+    const wobble = Math.sin(
+      (now / 1000) * SQUASH_STRETCH_FREQUENCY_HZ * 2 * Math.PI + this.roachPhase(roach.id),
+    );
+    const delta = SQUASH_STRETCH_MAX_DELTA * progress(roach, now) * wobble;
+    return { scaleX: 1 + delta, scaleY: 1 - delta };
+  }
+
+  /**
+   * specs/008-juice-animacao-barata (research.md §4): deslocamento visual somado por cima da
+   * posição real (`positionAt`) — amplitude e frequência crescem com `progress`, nunca lido de
+   * volta pelo hit-testing (FR-004, `handlePointerDown`).
+   */
+  private computeRoachTremorOffset(roach: Roach, now: number): { dx: number; dy: number } {
+    const roachProgress = progress(roach, now);
+    const frequency =
+      TREMOR_BASE_FREQUENCY_HZ + roachProgress * (TREMOR_MAX_FREQUENCY_HZ - TREMOR_BASE_FREQUENCY_HZ);
+    const amplitude = TREMOR_MAX_OFFSET_PX * roachProgress;
+    const phase = this.roachPhase(roach.id);
+    const dx = amplitude * Math.sin((now / 1000) * frequency * 2 * Math.PI + phase);
+    const dy = amplitude * Math.cos((now / 1000) * frequency * 1.3 * 2 * Math.PI + phase);
+    return { dx, dy };
+  }
+
   private syncRoachSprites(snapshot: MatchSnapshot): void {
     const activeIds = new Set(snapshot.activeRoaches.map((roach) => roach.id));
 
@@ -252,13 +303,16 @@ export class GameScene extends Phaser.Scene {
         continue;
       }
       const position = positionAt(roach, this.time.now, targetPosition);
+      const squash = this.computeRoachSquashStretch(roach, this.time.now);
+      const tremor = this.computeRoachTremorOffset(roach, this.time.now);
       let sprite = this.roachSprites.get(roach.id);
       if (!sprite) {
-        sprite = this.add.image(position.x, position.y, "roach");
+        sprite = this.add.image(position.x + tremor.dx, position.y + tremor.dy, "roach");
         this.roachSprites.set(roach.id, sprite);
       } else {
-        sprite.setPosition(position.x, position.y);
+        sprite.setPosition(position.x + tremor.dx, position.y + tremor.dy);
       }
+      sprite.setScale(squash.scaleX, squash.scaleY);
     }
   }
 
@@ -272,6 +326,10 @@ export class GameScene extends Phaser.Scene {
       if (!targetPosition) {
         continue;
       }
+      // specs/008-juice-animacao-barata (contracts/roach-juice-effect.md § "Garantia de
+      // não-interferência no hit-testing"): hit-test usa exclusivamente `positionAt()`, nunca
+      // `sprite.x`/`sprite.y`/`sprite.scaleX`/`sprite.scaleY` do sprite renderizado por
+      // `syncRoachSprites()` — o squash/stretch/tremor nunca deve ser lido aqui.
       candidates.push({
         roach,
         position: positionAt(roach, now, targetPosition),
