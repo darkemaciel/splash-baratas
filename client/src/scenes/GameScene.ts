@@ -9,7 +9,7 @@ import {
   type Point,
 } from "../config/gameConfig";
 import { elapsedMs, formatElapsedTime, shelfIndexFromId, type RiskLevel } from "../entities/Match";
-import { positionAt } from "../entities/Roach";
+import { positionAt, progress, type Roach } from "../entities/Roach";
 import type { FoodItem } from "../entities/FoodItem";
 import { pickTopmostHit, type RoachHitTestInput } from "../systems/CollisionSystem";
 import { matchStateManager, type MatchSnapshot } from "../systems/MatchStateManager";
@@ -43,6 +43,22 @@ const HUD_FONT_SIZE_PX = 18;
 // texto de vida (this.hudText), não de um valor fixo.
 const HUD_SCORE_GAP = 12;
 
+// specs/008-juice-animacao-barata (contracts/roach-juice-effect.md § "Constantes do efeito"):
+// squash/stretch + tremor puramente visuais, escalados por `progress(roach, now)` — zero no
+// spawn, máximo ao alcançar o alvo. `TREMOR_MAX_OFFSET_PX` fica abaixo de `HITBOX_PADDING_PX`
+// (6px) de propósito, para nunca degradar a precisão real de clique (Princípio V).
+const SQUASH_STRETCH_MAX_DELTA = 0.18;
+const SQUASH_STRETCH_FREQUENCY_HZ = 4;
+const TREMOR_MAX_OFFSET_PX = 4;
+const TREMOR_BASE_FREQUENCY_HZ = 6;
+const TREMOR_MAX_FREQUENCY_HZ = 14;
+
+// specs/009-pausar-partida (contracts/pause-lifecycle.md): botão de pausa no canto superior
+// esquerdo, espelhando a margem/altura já usadas pelo HUD de vida no canto superior direito —
+// mesma faixa vertical (acima de HUD_BAR_TOP_Y), fora da área das prateleiras.
+const HUD_MARGIN_LEFT = 12;
+const PAUSE_BUTTON_FONT_SIZE_PX = 16;
+
 /**
  * Única scene que lê `MatchStateManager.getSnapshot()`/chama `tick()` a cada frame e traduz o
  * estado de domínio em sprites — nenhuma regra de jogo vive aqui (Princípios I e II).
@@ -62,6 +78,15 @@ export class GameScene extends Phaser.Scene {
   private lastRenderedElapsedSeconds = 0;
   /** specs/003-feedback-sonoro-sfx: estado do loop ambiente de voo (data-model.md § "Som ambiente"). */
   private isFlyLoopActive = false;
+  /**
+   * specs/009-pausar-partida: soma total de milissegundos já gastos pausado nesta partida —
+   * `this.time.now` (Clock do Phaser) congela durante a pausa mas SALTA para o tempo real atual
+   * assim que a Scene retoma (não existe desconto automático do intervalo pausado), então todo
+   * consumo de tempo pelo domínio usa `logicalNow()` em vez de `this.time.now` diretamente.
+   */
+  private pausedAccumMs = 0;
+  /** Wall clock (`performance.now()`) no instante em que a pausa atual começou; `null` se não pausado. */
+  private pauseStartedAtWallClock: number | null = null;
 
   constructor() {
     super("GameScene");
@@ -73,6 +98,13 @@ export class GameScene extends Phaser.Scene {
     // restart se não for parado explicitamente aqui.
     this.sound.stopByKey("sfx-fly");
     this.isFlyLoopActive = false;
+
+    // specs/009-pausar-partida (research.md §5): guarda defensiva — o Scene Manager é global ao
+    // Game, então uma PauseOverlayScene deixada "pendurada" de uma sessão anterior sobreviveria a
+    // um restart se não for parada explicitamente aqui. No-op seguro se não estiver rodando.
+    this.scene.stop("PauseOverlayScene");
+    this.pausedAccumMs = 0;
+    this.pauseStartedAtWallClock = null;
 
     this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, "fridgeBg");
     for (const shelfY of SHELF_Y_POSITIONS) {
@@ -109,13 +141,54 @@ export class GameScene extends Phaser.Scene {
 
     // Centralizado no topo da tela, entre vida (direita) e pontuação (esquerda).
     this.timerText = this.add
-      .text(GAME_WIDTH / 2, HUD_LIFE_COUNTER_Y, formatElapsedTime(elapsedMs(snapshot, this.time.now)), {
+      .text(GAME_WIDTH / 2, HUD_LIFE_COUNTER_Y, formatElapsedTime(elapsedMs(snapshot, this.logicalNow())), {
         fontSize: `${HUD_FONT_SIZE_PX}px`,
         fontFamily: HUD_FONT_FAMILY,
         color: "#000000",
       })
       .setOrigin(0.5, 0);
     this.lastRenderedElapsedSeconds = 0;
+
+    // specs/009-pausar-partida (data-model.md, contracts/pause-lifecycle.md): botão de texto,
+    // mesmo padrão visual/interativo já usado em StartScene/GameOverScene — nenhum asset novo
+    // (Princípio VI).
+    const pauseButton = this.add
+      .text(HUD_MARGIN_LEFT, HUD_MARGIN_TOP, "Pausar", {
+        fontSize: `${PAUSE_BUTTON_FONT_SIZE_PX}px`,
+        fontFamily: HUD_FONT_FAMILY,
+        color: "#ffffff",
+        backgroundColor: "#333333",
+        padding: { x: 10, y: 6 },
+      })
+      .setOrigin(0, 0)
+      .setInteractive({ useHandCursor: true });
+
+    pauseButton.on("pointerdown", (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
+      // specs/009-pausar-partida (research.md §3, contracts/pause-lifecycle.md § "Garantia de
+      // não-interferência no domínio"): stopPropagation impede que este mesmo clique também
+      // dispare handlePointerDown (que trataria como clique perdido, tocaria sfx-miss e quebraria
+      // o combo) — enquanto GameScene está pausada, o próprio Scene Manager do Phaser desativa o
+      // Input Plugin desta Scene, então nenhum pointerdown chega a handlePointerDown até retomar.
+      event.stopPropagation();
+      this.triggerPause();
+    });
+
+    // specs/009-pausar-partida: atalho de teclado, conveniência extra além do botão (Princípio
+    // III — o botão já satisfaz a interação essencial via Pointer Events, o teclado é aditivo).
+    this.input.keyboard?.on("keydown-P", () => this.triggerPause());
+
+    // specs/009-pausar-partida (research.md corrigido): `this.time.now` congela durante a pausa
+    // mas salta para o tempo real ao retomar (Phaser não desconta o intervalo pausado sozinho) —
+    // acumular esse salto aqui é o que permite `logicalNow()` compensar em todo o resto do código.
+    this.events.on(Phaser.Scenes.Events.PAUSE, () => {
+      this.pauseStartedAtWallClock = performance.now();
+    });
+    this.events.on(Phaser.Scenes.Events.RESUME, () => {
+      if (this.pauseStartedAtWallClock !== null) {
+        this.pausedAccumMs += performance.now() - this.pauseStartedAtWallClock;
+        this.pauseStartedAtWallClock = null;
+      }
+    });
 
     this.unsubscribers = [
       matchStateManager.on("roach:eliminated", ({ roachId }) => this.playRoachEliminated(roachId)),
@@ -141,11 +214,29 @@ export class GameScene extends Phaser.Scene {
   }
 
   override update(_time: number, _delta: number): void {
-    matchStateManager.tick(this.time.now);
+    matchStateManager.tick(this.logicalNow());
     const snapshot = matchStateManager.getSnapshot();
     this.syncRoachSprites(snapshot);
     this.syncFlyLoop(snapshot);
     this.updateTimer(snapshot);
+  }
+
+  /**
+   * specs/009-pausar-partida: `this.time.now` (Clock do Phaser) para de avançar enquanto a Scene
+   * está pausada, mas ao retomar salta direto para o tempo real atual — sem descontar o intervalo
+   * pausado sozinho. `logicalNow()` é o "relógio" corrigido que todo consumidor de domínio
+   * (`tick`, `positionAt`, `elapsedMs`, o juice de specs/008) deve usar em vez de `this.time.now`
+   * diretamente, para que o tempo pausado nunca seja contabilizado (FR-003 a FR-009, FR-013).
+   */
+  private logicalNow(): number {
+    return this.time.now - this.pausedAccumMs;
+  }
+
+  /** specs/009-pausar-partida (contracts/pause-lifecycle.md § "Gatilhos e transições"). */
+  private triggerPause(): void {
+    this.sound.pauseAll();
+    this.scene.pause();
+    this.scene.launch("PauseOverlayScene");
   }
 
   /**
@@ -154,7 +245,7 @@ export class GameScene extends Phaser.Scene {
    * cálculo — Princípio V).
    */
   private updateTimer(snapshot: MatchSnapshot): void {
-    const elapsed = elapsedMs(snapshot, this.time.now);
+    const elapsed = elapsedMs(snapshot, this.logicalNow());
     const seconds = Math.floor(elapsed / 1000);
     if (seconds !== this.lastRenderedElapsedSeconds) {
       this.timerText.setText(formatElapsedTime(elapsed));
@@ -236,6 +327,47 @@ export class GameScene extends Phaser.Scene {
     return foodItemPosition(shelfIndexFromId(foodItem.shelfId), foodItem.slotIndex);
   }
 
+  /**
+   * specs/008-juice-animacao-barata (research.md §5): fase determinística derivada de `roach.id`,
+   * usada para dessincronizar squash/stretch e tremor entre baratas diferentes — nenhum estado
+   * novo é guardado (Princípio II), a fase é recalculada a cada chamada a partir do próprio id.
+   */
+  private roachPhase(roachId: string): number {
+    let sum = 0;
+    for (let i = 0; i < roachId.length; i += 1) {
+      sum += roachId.codePointAt(i) ?? 0;
+    }
+    return (sum % 1000) * ((2 * Math.PI) / 1000);
+  }
+
+  /**
+   * specs/008-juice-animacao-barata (research.md §3): deformação de escala puramente visual —
+   * amplitude cresce linearmente com `progress` (zero no spawn), frequência fixa.
+   */
+  private computeRoachSquashStretch(roach: Roach, now: number): { scaleX: number; scaleY: number } {
+    const wobble = Math.sin(
+      (now / 1000) * SQUASH_STRETCH_FREQUENCY_HZ * 2 * Math.PI + this.roachPhase(roach.id),
+    );
+    const delta = SQUASH_STRETCH_MAX_DELTA * progress(roach, now) * wobble;
+    return { scaleX: 1 + delta, scaleY: 1 - delta };
+  }
+
+  /**
+   * specs/008-juice-animacao-barata (research.md §4): deslocamento visual somado por cima da
+   * posição real (`positionAt`) — amplitude e frequência crescem com `progress`, nunca lido de
+   * volta pelo hit-testing (FR-004, `handlePointerDown`).
+   */
+  private computeRoachTremorOffset(roach: Roach, now: number): { dx: number; dy: number } {
+    const roachProgress = progress(roach, now);
+    const frequency =
+      TREMOR_BASE_FREQUENCY_HZ + roachProgress * (TREMOR_MAX_FREQUENCY_HZ - TREMOR_BASE_FREQUENCY_HZ);
+    const amplitude = TREMOR_MAX_OFFSET_PX * roachProgress;
+    const phase = this.roachPhase(roach.id);
+    const dx = amplitude * Math.sin((now / 1000) * frequency * 2 * Math.PI + phase);
+    const dy = amplitude * Math.cos((now / 1000) * frequency * 1.3 * 2 * Math.PI + phase);
+    return { dx, dy };
+  }
+
   private syncRoachSprites(snapshot: MatchSnapshot): void {
     const activeIds = new Set(snapshot.activeRoaches.map((roach) => roach.id));
 
@@ -251,19 +383,23 @@ export class GameScene extends Phaser.Scene {
       if (!targetPosition) {
         continue;
       }
-      const position = positionAt(roach, this.time.now, targetPosition);
+      const now = this.logicalNow();
+      const position = positionAt(roach, now, targetPosition);
+      const squash = this.computeRoachSquashStretch(roach, now);
+      const tremor = this.computeRoachTremorOffset(roach, now);
       let sprite = this.roachSprites.get(roach.id);
       if (!sprite) {
-        sprite = this.add.image(position.x, position.y, "roach");
+        sprite = this.add.image(position.x + tremor.dx, position.y + tremor.dy, "roach");
         this.roachSprites.set(roach.id, sprite);
       } else {
-        sprite.setPosition(position.x, position.y);
+        sprite.setPosition(position.x + tremor.dx, position.y + tremor.dy);
       }
+      sprite.setScale(squash.scaleX, squash.scaleY);
     }
   }
 
   private handlePointerDown(pointer: Phaser.Input.Pointer): void {
-    const now = this.time.now;
+    const now = this.logicalNow();
     const snapshot = matchStateManager.getSnapshot();
     const candidates: RoachHitTestInput[] = [];
 
@@ -272,6 +408,10 @@ export class GameScene extends Phaser.Scene {
       if (!targetPosition) {
         continue;
       }
+      // specs/008-juice-animacao-barata (contracts/roach-juice-effect.md § "Garantia de
+      // não-interferência no hit-testing"): hit-test usa exclusivamente `positionAt()`, nunca
+      // `sprite.x`/`sprite.y`/`sprite.scaleX`/`sprite.scaleY` do sprite renderizado por
+      // `syncRoachSprites()` — o squash/stretch/tremor nunca deve ser lido aqui.
       candidates.push({
         roach,
         position: positionAt(roach, now, targetPosition),

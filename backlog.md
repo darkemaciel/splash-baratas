@@ -37,7 +37,8 @@ da constitution.
 | Item | Descrição | Risco | Pontuação | Esforço | Prioridade |
 |---|---|---|---|---|---|
 | HUD de progresso/risco | Contador visível de comidas restantes/roubadas, ou barra de risco geral. Hoje o jogador só lê o estado observando as prateleiras (FR-022). | Baixo | Médio | Baixo | ✅ **Entregue** |
-| Juice na animação da barata | Squash/stretch e leve tremor na barata perto do alvo, para reforçar urgência visual sem mudar a lógica de domínio. | Baixo | Médio | Baixo | **P1** |
+| Juice na animação da barata | Squash/stretch e leve tremor na barata perto do alvo, para reforçar urgência visual sem mudar a lógica de domínio. Entregue via `specs/008-juice-animacao-barata`: `computeRoachSquashStretch`/`computeRoachTremorOffset` em `GameScene.syncRoachSprites`, intensidade escalando com `progress(roach, now)` (zero no spawn, máxima ao alcançar o alvo). | Baixo | Médio | Baixo | ✅ **Entregue** |
+| Animação de voo da barata | Animação contínua (ex.: bater de asas/oscilação vertical) tocando durante todo o trajeto, independente da proximidade do alvo — hoje a barata é um sprite estático deslocado por `positionAt()`. Feedback do usuário ao validar `specs/008-juice-animacao-barata`: como o "juice" atual (squash/tremor) zera no spawn e só cresce perto do alvo, uma spec futura de voo precisa decidir como compor as duas camadas (ex.: voo como baseline sempre ativo, urgência como modulação por cima) sem reabrir o cálculo já entregue em `GameScene`. | Baixo | Médio | Médio | **P2** |
 | Pausar partida | Tecla/botão de pausa que congela `tick()` sem resetar o `Match`. Simples dado que o loop já é orientado por timestamp (`now`). | Baixo | Médio | Baixo | **P1** |
 | Variação nos pontos de spawn | Baratas surgindo de múltiplos pontos/padrões, não só os 4 pontos fixos hoje (`SPAWN_POINTS`, FR-005). | Baixo | Baixo | Baixo | **P2** |
 
