@@ -5,6 +5,7 @@ import { BootScene } from "./src/scenes/BootScene";
 import { StartScene } from "./src/scenes/StartScene";
 import { GameScene } from "./src/scenes/GameScene";
 import { GameOverScene } from "./src/scenes/GameOverScene";
+import { PauseOverlayScene } from "./src/scenes/PauseOverlayScene";
 
 inject();
 
@@ -22,5 +23,5 @@ new Phaser.Game({
     // valor fixo — do contrário o piso de altura ficaria errado na base portrait.
     min: { width: 320, height: Math.round((320 * GAME_HEIGHT) / GAME_WIDTH) },
   },
-  scene: [BootScene, StartScene, GameScene, GameOverScene],
+  scene: [BootScene, StartScene, GameScene, GameOverScene, PauseOverlayScene],
 });
