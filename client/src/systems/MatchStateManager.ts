@@ -24,7 +24,14 @@ import {
   markReachedTarget,
   type Roach,
 } from "../entities/Roach";
-import { foodItemPosition, nearestSpawnPoint, SPAWN_INTERVAL_MS, TRAVEL_DURATION_MS } from "../config/gameConfig";
+import {
+  foodItemPosition,
+  pickSpawnPoint,
+  spawnPointCandidates,
+  SPAWN_INTERVAL_MS,
+  TRAVEL_DURATION_MS,
+  type Point,
+} from "../config/gameConfig";
 
 export interface MatchSnapshot {
   readonly shelves: ReadonlyArray<{ readonly id: string; readonly foodItemIds: readonly string[] }>;
@@ -66,6 +73,12 @@ export class MatchStateManager {
   private match: Match = createEmptyMatch();
   private readonly events = new EventTarget();
   private lastSpawnAt = 0;
+  /**
+   * specs/010-variacao-pontos-spawn (FR-005, data-model.md): último ponto de spawn usado por
+   * comida-alvo, para evitar repetir o ponto imediatamente anterior quando há alternativa na
+   * região. Bookkeeping efêmero, não é estado de domínio — limpo a cada start()/restart().
+   */
+  private lastSpawnPointByTarget = new Map<string, Point>();
 
   getSnapshot(): MatchSnapshot {
     return {
@@ -96,6 +109,7 @@ export class MatchStateManager {
   start(now: number = Date.now()): void {
     this.match = createMatch(now);
     this.lastSpawnAt = now;
+    this.lastSpawnPointByTarget = new Map();
     this.emit("match:started", this.getSnapshot());
   }
 
@@ -120,7 +134,9 @@ export class MatchStateManager {
         const target = candidates[Math.floor(Math.random() * candidates.length)]!;
         const shelfIndex = shelfIndexFromId(target.shelfId);
         const targetPosition = foodItemPosition(shelfIndex, target.slotIndex);
-        const spawnPoint = nearestSpawnPoint(targetPosition);
+        const avoid = this.lastSpawnPointByTarget.get(target.id);
+        const spawnPoint = pickSpawnPoint(spawnPointCandidates(targetPosition), avoid);
+        this.lastSpawnPointByTarget.set(target.id, spawnPoint);
         const roach = createRoach(
           `roach-${target.id}-${now}`,
           target.id,
