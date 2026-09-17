@@ -8,7 +8,7 @@ import {
   SHELF_Y_POSITIONS,
   type Point,
 } from "../config/gameConfig";
-import { shelfIndexFromId, type RiskLevel } from "../entities/Match";
+import { elapsedMs, formatElapsedTime, shelfIndexFromId, type RiskLevel } from "../entities/Match";
 import { positionAt } from "../entities/Roach";
 import type { FoodItem } from "../entities/FoodItem";
 import { pickTopmostHit, type RoachHitTestInput } from "../systems/CollisionSystem";
@@ -56,6 +56,10 @@ export class GameScene extends Phaser.Scene {
   private hudRiskLevel: RiskLevel | null = null;
   /** specs/004-sistema-pontuacao: texto de pontuação, junto ao HUD de progresso/risco. */
   private scoreText!: Phaser.GameObjects.Text;
+  /** specs/007-tempo-de-sobrevivencia: texto do cronômetro, canto superior esquerdo. */
+  private timerText!: Phaser.GameObjects.Text;
+  /** specs/007-tempo-de-sobrevivencia (research.md §7): último segundo inteiro renderizado — evita redesenhar o texto a cada frame quando o valor visível não muda. */
+  private lastRenderedElapsedSeconds = 0;
   /** specs/003-feedback-sonoro-sfx: estado do loop ambiente de voo (data-model.md § "Som ambiente"). */
   private isFlyLoopActive = false;
 
@@ -103,6 +107,16 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(1, 0);
     this.updateScore(snapshot);
 
+    // Centralizado no topo da tela, entre vida (direita) e pontuação (esquerda).
+    this.timerText = this.add
+      .text(GAME_WIDTH / 2, HUD_LIFE_COUNTER_Y, formatElapsedTime(elapsedMs(snapshot, this.time.now)), {
+        fontSize: `${HUD_FONT_SIZE_PX}px`,
+        fontFamily: HUD_FONT_FAMILY,
+        color: "#000000",
+      })
+      .setOrigin(0.5, 0);
+    this.lastRenderedElapsedSeconds = 0;
+
     this.unsubscribers = [
       matchStateManager.on("roach:eliminated", ({ roachId }) => this.playRoachEliminated(roachId)),
       matchStateManager.on("roach:eliminated", () => this.updateScore(matchStateManager.getSnapshot())),
@@ -131,6 +145,21 @@ export class GameScene extends Phaser.Scene {
     const snapshot = matchStateManager.getSnapshot();
     this.syncRoachSprites(snapshot);
     this.syncFlyLoop(snapshot);
+    this.updateTimer(snapshot);
+  }
+
+  /**
+   * specs/007-tempo-de-sobrevivencia (research.md §7): recalcula o tempo decorrido a cada frame,
+   * mas só redesenha o texto quando o segundo inteiro exibido muda (throttle de redraw, não de
+   * cálculo — Princípio V).
+   */
+  private updateTimer(snapshot: MatchSnapshot): void {
+    const elapsed = elapsedMs(snapshot, this.time.now);
+    const seconds = Math.floor(elapsed / 1000);
+    if (seconds !== this.lastRenderedElapsedSeconds) {
+      this.timerText.setText(formatElapsedTime(elapsed));
+      this.lastRenderedElapsedSeconds = seconds;
+    }
   }
 
   /**

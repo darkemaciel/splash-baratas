@@ -37,6 +37,9 @@ export interface MatchSnapshot {
   readonly riskLevel: RiskLevel;
   /** specs/004-sistema-pontuacao: cópia direta de match.score, não derivado (FR-001). */
   readonly score: number;
+  /** specs/007-tempo-de-sobrevivencia: bruto, não pré-calculado — ver elapsedMs() (research.md §3). */
+  readonly startedAt: number;
+  readonly endedAt: number | null;
 }
 
 export type MatchEventName =
@@ -74,6 +77,8 @@ export class MatchStateManager {
       foodTotalCount: foodTotalCount(this.match),
       riskLevel: riskLevel(this.match),
       score: this.match.score,
+      startedAt: this.match.startedAt,
+      endedAt: this.match.endedAt,
     };
   }
 
@@ -89,7 +94,7 @@ export class MatchStateManager {
 
   /** FR-001, FR-002: cria uma nova Match com 3 prateleiras / 9 comidas presentes, sem baratas. */
   start(now: number = Date.now()): void {
-    this.match = createMatch();
+    this.match = createMatch(now);
     this.lastSpawnAt = now;
     this.emit("match:started", this.getSnapshot());
   }
@@ -141,6 +146,7 @@ export class MatchStateManager {
         this.emit("food:stolen", { foodItemId: roach.targetFoodItemId });
 
         if (allFoodStolen(this.match)) {
+          this.match.endedAt = now; // specs/007-tempo-de-sobrevivencia (FR-004): congela o cronômetro
           this.match.status = "lost";
           this.emit("match:lost", this.getSnapshot());
           break;

@@ -24,6 +24,8 @@ function matchWithRemaining(total: number, remaining: number): Match {
     score: 0,
     comboStreak: 0,
     lastEliminationAt: null,
+    startedAt: 0,
+    endedAt: null,
   };
 }
 
