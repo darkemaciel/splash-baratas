@@ -3,6 +3,7 @@ import {
   applyEliminationScore,
   createEmptyMatch,
   createMatch,
+  elapsedMs,
   findFoodItem,
   findRoach,
   foodRemainingCount,
@@ -25,11 +26,11 @@ import {
   type Roach,
 } from "../entities/Roach";
 import {
+  currentSpawnIntervalMs,
+  currentTravelDurationMs,
   foodItemPosition,
   pickSpawnPoint,
   spawnPointCandidates,
-  SPAWN_INTERVAL_MS,
-  TRAVEL_DURATION_MS,
   type Point,
 } from "../config/gameConfig";
 
@@ -128,7 +129,11 @@ export class MatchStateManager {
       return;
     }
 
-    if (now - this.lastSpawnAt >= SPAWN_INTERVAL_MS) {
+    // specs/011-dificuldade-progressiva: calculado uma única vez por tick() e reaproveitado tanto
+    // para a cadência de spawn quanto para o tempo de viagem da barata deste ciclo.
+    const survivalMs = elapsedMs(this.match, now);
+
+    if (now - this.lastSpawnAt >= currentSpawnIntervalMs(survivalMs)) {
       const candidates = presentFoodItemsWithoutActiveRoach(this.match);
       if (candidates.length > 0) {
         const target = candidates[Math.floor(Math.random() * candidates.length)]!;
@@ -142,7 +147,7 @@ export class MatchStateManager {
           target.id,
           spawnPoint,
           now,
-          TRAVEL_DURATION_MS,
+          currentTravelDurationMs(survivalMs),
         );
         this.match.activeRoaches.push(roach);
         this.lastSpawnAt = now;

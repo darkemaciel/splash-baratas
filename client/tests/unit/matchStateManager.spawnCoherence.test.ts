@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { MatchStateManager } from "../../src/systems/MatchStateManager";
-import { foodItemPosition, spawnPointCandidates, SPAWN_INTERVAL_MS } from "../../src/config/gameConfig";
+import { foodItemPosition, spawnPointCandidates, SPAWN_INTERVAL_BASE_MS } from "../../src/config/gameConfig";
 import { shelfIndexFromId } from "../../src/entities/Match";
 
 describe("Coerência região/alvo em tick() (US2, FR-003, spec.md US2 AC1/AC2)", () => {
@@ -28,7 +28,7 @@ describe("Coerência região/alvo em tick() (US2, FR-003, spec.md US2 AC1/AC2)",
     let now = 0;
     const totalDurationMs = 120_000;
     while (now < totalDurationMs) {
-      now += SPAWN_INTERVAL_MS;
+      now += SPAWN_INTERVAL_BASE_MS;
       manager.tick(now);
       for (const roach of manager.getSnapshot().activeRoaches) {
         manager.tryEliminateRoach(roach.id, roach.spawnedAt);

@@ -23,18 +23,20 @@ describe("MatchStateManager — pontuação (FR-001, FR-003, FR-011)", () => {
     // Cada eliminação ocorre bem depois do spawn (reactionMs > 1500ms, fora de qualquer faixa
     // de bônus de reação) e bem espaçada da anterior (> COMBO_WINDOW_MS = 2000ms), para que este
     // teste continue validando só a soma da pontuação base mesmo depois que reactionBonusPoints
-    // (US2) e comboBonusPoints (US3) existirem.
+    // (US2) e comboBonusPoints (US3) existirem. 1600ms (não 2900ms): precisa continuar menor que
+    // TRAVEL_DURATION_FLOOR_MS (specs/011-dificuldade-progressiva) com folga, já que em nenhum
+    // destes ticks a barata pode chegar ao prazo antes da eliminação, mesmo na dificuldade máxima.
     manager.tick(2500);
     const roachA = manager.getSnapshot().activeRoaches[0]!;
-    manager.tryEliminateRoach(roachA.id, roachA.spawnedAt + 2900);
+    manager.tryEliminateRoach(roachA.id, roachA.spawnedAt + 1600);
 
     manager.tick(8000);
     const roachB = manager.getSnapshot().activeRoaches[0]!;
-    manager.tryEliminateRoach(roachB.id, roachB.spawnedAt + 2900);
+    manager.tryEliminateRoach(roachB.id, roachB.spawnedAt + 1600);
 
     manager.tick(13500);
     const roachC = manager.getSnapshot().activeRoaches[0]!;
-    manager.tryEliminateRoach(roachC.id, roachC.spawnedAt + 2900);
+    manager.tryEliminateRoach(roachC.id, roachC.spawnedAt + 1600);
 
     expect(manager.getSnapshot().score).toBe(3 * SCORE_BASE_POINTS);
   });

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { MatchStateManager } from "../../src/systems/MatchStateManager";
-import { SPAWN_INTERVAL_MS } from "../../src/config/gameConfig";
+import { SPAWN_INTERVAL_BASE_MS } from "../../src/config/gameConfig";
 import type { Roach } from "../../src/entities/Roach";
 
 const POLL_STEP_MS = 50;
@@ -53,7 +53,7 @@ function collectRepeatedSpawnsForSingleTarget(
   const roaches: Roach[] = [];
   let now = startNow;
   for (let i = 0; i < spawnCount; i++) {
-    now += SPAWN_INTERVAL_MS;
+    now += SPAWN_INTERVAL_BASE_MS;
     manager.tick(now);
     const roach = manager.getSnapshot().activeRoaches[0];
     if (!roach) {
@@ -134,7 +134,7 @@ describe("SC-001: ao menos 8 posições de spawn distintas em uma partida típic
     let now = 0;
     const totalDurationMs = 120_000;
     while (now < totalDurationMs) {
-      now += SPAWN_INTERVAL_MS;
+      now += SPAWN_INTERVAL_BASE_MS;
       manager.tick(now);
       // Simula um jogador que nunca deixa uma comida ser roubada: elimina toda barata ativa assim
       // que ela aparece, mantendo as 9 comidas sempre presentes e candidatas (SC-001).

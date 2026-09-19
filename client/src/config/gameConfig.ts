@@ -29,11 +29,25 @@ export const SHELF_COUNT = 3;
 export const FOOD_ITEMS_PER_SHELF = 3;
 export const TOTAL_FOOD_ITEMS = SHELF_COUNT * FOOD_ITEMS_PER_SHELF;
 
-// FR-003 / FR-005 / FR-016 / research.md §3: cadência e tempo de reação fixos durante toda a
-// partida. Estas constantes são o único ponto de leitura desses valores em todo o código —
-// nenhuma outra parte do sistema pode redefini-los ou torná-los dinâmicos (FR-016).
-export const SPAWN_INTERVAL_MS = 2500;
-export const TRAVEL_DURATION_MS = 3000;
+// FR-003 / FR-005 / research.md §3: cadência e tempo de reação no início de qualquer partida
+// (`survivalMs=0`). specs/011-dificuldade-progressiva substitui deliberadamente a garantia
+// original de FR-016 da spec 001 ("constantes fixas e únicas durante toda a partida") — a partir
+// dela, esses valores só valem no início; ver currentSpawnIntervalMs/currentTravelDurationMs.
+export const SPAWN_INTERVAL_BASE_MS = 2500;
+export const TRAVEL_DURATION_BASE_MS = 3000;
+
+// specs/011-dificuldade-progressiva (FR-004, data-model.md, research.md §2): pisos mínimos —
+// cadência/tempo de reação nunca ficam mais agressivos que isso, mesmo em partidas muito longas.
+// TRAVEL_DURATION_FLOOR_MS permanece acima do maior limiar de REACTION_BONUS_TIERS (1500ms) para
+// que nenhuma faixa de bônus se torne inalcançável na dificuldade máxima.
+export const SPAWN_INTERVAL_FLOOR_MS = 1200;
+export const TRAVEL_DURATION_FLOOR_MS = 2000;
+
+// specs/011-dificuldade-progressiva (research.md §2): tempo de sobrevivência em que a dificuldade
+// atinge o piso. Ajustado de 180_000 (3min) para 90_000 (1min30s) — feedback de playtest: a rampa
+// original estava lenta demais; dobrar a velocidade de progressão significa alcançar o piso na
+// metade do tempo. Ajuste de tuning simples (research.md §2 já previa isso), não muda a spec.
+export const DIFFICULTY_RAMP_DURATION_MS = 90_000;
 
 // FR-018 / research.md §4: hit-test circular = raio visual do sprite + padding fixo.
 export const HITBOX_PADDING_PX = 6;
@@ -114,10 +128,13 @@ export const REACTION_BONUS_TIERS: readonly ReactionBonusTier[] = [
   { maxMs: 1500, bonus: 10 },
 ];
 export const COMBO_BONUS_STEP_POINTS = 25;
-// 3000ms (não 2000ms): com SPAWN_INTERVAL_MS=2500 e TRAVEL_DURATION_MS=3000, o intervalo mínimo
-// entre "última eliminação de uma leva de baratas" e "primeira eliminação da próxima leva" é de
-// ~2000ms (2 * SPAWN_INTERVAL_MS - TRAVEL_DURATION_MS) — com a janela igual a esse mínimo, um
-// combo de 3+ só seria alcançável com precisão de milissegundo. 3000ms dá folga real ao jogador.
+// 3000ms (não 2000ms): com SPAWN_INTERVAL_BASE_MS=2500 e TRAVEL_DURATION_BASE_MS=3000, o intervalo
+// mínimo entre "última eliminação de uma leva de baratas" e "primeira eliminação da próxima leva" é
+// de ~2000ms (2 * SPAWN_INTERVAL_BASE_MS - TRAVEL_DURATION_BASE_MS) — com a janela igual a esse
+// mínimo, um combo de 3+ só seria alcançável com precisão de milissegundo. 3000ms dá folga real ao
+// jogador. specs/011-dificuldade-progressiva (research.md §2): na dificuldade máxima esse intervalo
+// mínimo cai para ~400ms (2*SPAWN_INTERVAL_FLOOR_MS-TRAVEL_DURATION_FLOOR_MS), ainda folgado frente
+// a COMBO_WINDOW_MS — nenhum ajuste necessário aqui.
 export const COMBO_WINDOW_MS = 3000;
 
 // specs/010-variacao-pontos-spawn (FR-003, contracts/spawn-point-selection.md): decide a região de
@@ -154,4 +171,23 @@ export function pickSpawnPoint(candidates: readonly Point[], avoid?: Point): Poi
       : candidates;
   const source = pool.length > 0 ? pool : candidates;
   return source[Math.floor(Math.random() * source.length)]!;
+}
+
+// specs/011-dificuldade-progressiva (research.md §1): interpolação linear de `base` para `piso`,
+// atingindo o piso exatamente em `DIFFICULTY_RAMP_DURATION_MS` e nunca o ultrapassando depois.
+function rampedValue(survivalMs: number, base: number, floor: number): number {
+  const t = Math.min(1, Math.max(0, survivalMs / DIFFICULTY_RAMP_DURATION_MS));
+  return base + (floor - base) * t;
+}
+
+// specs/011-dificuldade-progressiva (FR-001, FR-003, contracts/difficulty-curve.md): intervalo de
+// spawn atual, decrescendo de SPAWN_INTERVAL_BASE_MS para SPAWN_INTERVAL_FLOOR_MS.
+export function currentSpawnIntervalMs(survivalMs: number): number {
+  return rampedValue(survivalMs, SPAWN_INTERVAL_BASE_MS, SPAWN_INTERVAL_FLOOR_MS);
+}
+
+// specs/011-dificuldade-progressiva (FR-002, FR-003, contracts/difficulty-curve.md): tempo de
+// viagem atual, decrescendo de TRAVEL_DURATION_BASE_MS para TRAVEL_DURATION_FLOOR_MS.
+export function currentTravelDurationMs(survivalMs: number): number {
+  return rampedValue(survivalMs, TRAVEL_DURATION_BASE_MS, TRAVEL_DURATION_FLOOR_MS);
 }
