@@ -53,6 +53,15 @@ export const DIFFICULTY_RAMP_DURATION_MS = 90_000;
 export const HITBOX_PADDING_PX = 6;
 export const ROACH_VISUAL_RADIUS = 20;
 
+// specs/012-high-score-local (data-model.md): chave namespaced usada por systems/HighScoreStore.ts
+// para ler/escrever o ranking em localStorage — evita colisão com chaves que uma feature futura
+// possa adicionar ao mesmo domínio.
+export const HIGH_SCORE_STORAGE_KEY = "baratas-na-geladeira:high-score";
+
+// specs/012-high-score-local (spec.md § Clarifications, data-model.md): tamanho fixo do ranking
+// local (Top 5) — decisão revisada após validação manual de uma primeira versão com recorde único.
+export const HIGH_SCORE_RANKING_MAX_ENTRIES = 5;
+
 // Posições verticais das 3 prateleiras e horizontais dos 3 slots de comida por prateleira — grid
 // 3x3 (research.md §2), expressas como frações da resolução-base landscape original (960x600) e
 // aplicadas a GAME_WIDTH/GAME_HEIGHT — assim o grid mantém as mesmas proporções relativas em
