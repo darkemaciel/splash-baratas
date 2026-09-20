@@ -26,6 +26,7 @@ import {
   type Roach,
 } from "../entities/Roach";
 import {
+  currentRoachCap,
   currentSpawnIntervalMs,
   currentTravelDurationMs,
   foodItemPosition,
@@ -123,6 +124,8 @@ export class MatchStateManager {
    * FR-003/FR-005/FR-009/FR-021: spawna baratas na cadência fixa, sem exceder uma barata ativa
    * por comida presente. FR-007/FR-008: baratas cujo tempo de viagem se esgota roubam a comida.
    * FR-010/FR-014: ao roubar a última comida, a partida entra em derrota e para de spawnar.
+   * specs/013-teto-baratas-simultaneas: `roachCap` é uma condição adicional a `candidates.length`,
+   * nunca substituta — nunca pode permitir mais baratas do que comidas presentes (FR-006).
    */
   tick(now: number): void {
     if (this.match.status !== "playing") {
@@ -135,7 +138,8 @@ export class MatchStateManager {
 
     if (now - this.lastSpawnAt >= currentSpawnIntervalMs(survivalMs)) {
       const candidates = presentFoodItemsWithoutActiveRoach(this.match);
-      if (candidates.length > 0) {
+      const roachCap = currentRoachCap(survivalMs);
+      if (candidates.length > 0 && this.match.activeRoaches.length < roachCap) {
         const target = candidates[Math.floor(Math.random() * candidates.length)]!;
         const shelfIndex = shelfIndexFromId(target.shelfId);
         const targetPosition = foodItemPosition(shelfIndex, target.slotIndex);

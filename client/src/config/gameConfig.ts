@@ -49,6 +49,14 @@ export const TRAVEL_DURATION_FLOOR_MS = 2000;
 // metade do tempo. Ajuste de tuning simples (research.md §2 já previa isso), não muda a spec.
 export const DIFFICULTY_RAMP_DURATION_MS = 90_000;
 
+// specs/013-teto-baratas-simultaneas (research.md §3): teto explícito de baratas ativas
+// simultaneamente, substituindo o limite implícito de "uma por comida presente" (FR-021 da spec
+// 001). Verificado empiricamente que a concorrência natural do jogo nunca passa de 2 em nenhum
+// ponto da rampa de dificuldade — um teto acima disso (ex.: até TOTAL_FOOD_ITEMS) nunca teria efeito
+// observável; 1→2 é o único intervalo que realmente vincula o comportamento.
+export const ROACH_CAP_BASE = 1;
+export const ROACH_CAP_MAX = 2;
+
 // FR-018 / research.md §4: hit-test circular = raio visual do sprite + padding fixo.
 export const HITBOX_PADDING_PX = 6;
 export const ROACH_VISUAL_RADIUS = 20;
@@ -199,4 +207,12 @@ export function currentSpawnIntervalMs(survivalMs: number): number {
 // viagem atual, decrescendo de TRAVEL_DURATION_BASE_MS para TRAVEL_DURATION_FLOOR_MS.
 export function currentTravelDurationMs(survivalMs: number): number {
   return rampedValue(survivalMs, TRAVEL_DURATION_BASE_MS, TRAVEL_DURATION_FLOOR_MS);
+}
+
+// specs/013-teto-baratas-simultaneas (FR-001, FR-003, FR-005, contracts/roach-cap.md): teto de
+// baratas simultâneas atual, crescendo de ROACH_CAP_BASE para ROACH_CAP_MAX — direção oposta às
+// duas curvas acima (que decrescem). Arredondado com Math.round pois, ao contrário de ms, uma
+// contagem de baratas não pode ser fracionária.
+export function currentRoachCap(survivalMs: number): number {
+  return Math.round(rampedValue(survivalMs, ROACH_CAP_BASE, ROACH_CAP_MAX));
 }
