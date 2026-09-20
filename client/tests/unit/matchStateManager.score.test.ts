@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { COMBO_WINDOW_MS, SCORE_BASE_POINTS } from "../../src/config/gameConfig";
+import {
+  COMBO_WINDOW_MS,
+  DIFFICULTY_RAMP_DURATION_MS,
+  SCORE_BASE_POINTS,
+  SPAWN_INTERVAL_FLOOR_MS,
+} from "../../src/config/gameConfig";
 import { comboBonusPoints, reactionBonusPoints } from "../../src/entities/Match";
 import { MatchStateManager } from "../../src/systems/MatchStateManager";
 
@@ -88,23 +93,32 @@ describe("MatchStateManager — bônus de velocidade de reação (FR-004, FR-005
 });
 
 /**
- * Notas de temporização (descobertas ao escrever estes testes — ver research.md §4): com
- * SPAWN_INTERVAL_MS=2500 e TRAVEL_DURATION_MS=3000, no máximo 2 baratas ficam simultaneamente
- * ativas antes que a mais antiga expire. Por isso, os testes abaixo usam sempre o mesmo par-base
- * (A spawna em 2500 e é eliminada perto do seu prazo, em 5450; B spawna em 5000 e é eliminada logo
- * em seguida, em 5500) para formar uma sequência de combo de 2, e então variam o que acontece
- * depois desse par para isolar cada gatilho de reset — sempre garantindo que, se o gatilho testado
- * não existisse, nem o timeout (COMBO_WINDOW_MS) explicaria o resultado observado.
+ * Notas de temporização (revisadas por specs/013-teto-baratas-simultaneas): estes testes precisam
+ * de 2 baratas simultaneamente ativas (A e B) para formar uma sequência de combo realista. Desde
+ * specs/013, o teto de baratas simultâneas começa em ROACH_CAP_BASE=1 no início da partida — 2
+ * baratas só podem coexistir a partir de `survivalMs >= DIFFICULTY_RAMP_DURATION_MS` (quando o teto
+ * já é ROACH_CAP_MAX=2). Por isso, `T0 = DIFFICULTY_RAMP_DURATION_MS` é usado como o instante em que
+ * a primeira barata (A) desta seção sempre spawna — a partir daí, cadência de spawn e tempo de
+ * viagem também já estão nos seus pisos (`SPAWN_INTERVAL_FLOOR_MS`/`TRAVEL_DURATION_FLOOR_MS`,
+ * specs/011), valores fixos e constantes dali em diante, o que simplifica o raciocínio sobre os
+ * deltas de tempo usados abaixo (não mudam mais com o tempo, ao contrário da região `BASE`). Os
+ * testes usam sempre o mesmo par-base (A spawna em T0 e é eliminada logo depois, em T0+450; B
+ * spawna em T0+SPAWN_INTERVAL_FLOOR_MS e é eliminada logo em seguida) para formar uma sequência de
+ * combo de 2, e então variam o que acontece depois desse par para isolar cada gatilho de reset —
+ * sempre garantindo que, se o gatilho testado não existisse, nem o timeout (COMBO_WINDOW_MS)
+ * explicaria o resultado observado.
  */
 describe("MatchStateManager — bônus de combo (FR-006, FR-007, SC-003, SC-004)", () => {
+  const T0 = DIFFICULTY_RAMP_DURATION_MS;
+
   function buildComboOfTwo(manager: MatchStateManager): void {
-    manager.tick(2500); // spawn A
+    manager.tick(T0); // spawn A (teto já em ROACH_CAP_MAX=2 a partir daqui)
     const a = manager.getSnapshot().activeRoaches[0]!;
-    manager.tick(5000); // spawn B (A ainda seguro: 5000-2500=2500 < TRAVEL_DURATION_MS)
+    manager.tick(T0 + SPAWN_INTERVAL_FLOOR_MS); // spawn B (A ainda ativa: teto permite 2)
     const b = manager.getSnapshot().activeRoaches.find((r) => r.id !== a.id)!;
 
-    manager.tryEliminateRoach(a.id, 5450); // reactionMs=2950 (sem bônus) — comboStreak -> 1
-    manager.tryEliminateRoach(b.id, 5500); // reactionMs=500 (+50) — comboStreak -> 2, gap=50ms
+    manager.tryEliminateRoach(a.id, T0 + 450); // reactionMs=450 (+50) — comboStreak -> 1
+    manager.tryEliminateRoach(b.id, T0 + SPAWN_INTERVAL_FLOOR_MS + 50); // reactionMs=50 (+50) — comboStreak -> 2, gap=800ms
   }
 
   test("sequência de 3 eliminações consecutivas rende mais que a soma das pontuações isoladas", () => {
@@ -112,19 +126,20 @@ describe("MatchStateManager — bônus de combo (FR-006, FR-007, SC-003, SC-004)
     chained.start(0);
     buildComboOfTwo(chained);
 
-    chained.tick(7500); // spawn C (A/B já removidas — sem risco de expirar nenhuma delas)
+    chained.tick(T0 + SPAWN_INTERVAL_FLOOR_MS * 2); // spawn C (A/B já removidas)
     const c = chained.getSnapshot().activeRoaches[0]!;
-    chained.tryEliminateRoach(c.id, 7600); // reactionMs=100 (+50), gap=2100ms < COMBO_WINDOW_MS -> comboStreak 3
+    const eC = T0 + SPAWN_INTERVAL_FLOOR_MS * 2 + 100;
+    chained.tryEliminateRoach(c.id, eC); // reactionMs=100 (+50), gap=1250ms < COMBO_WINDOW_MS -> comboStreak 3
     const chainedTotal = chained.getSnapshot().score;
 
     // Equivalente isolado: as mesmas 3 eliminações (mesmo reactionMs cada), mas sem nenhum combo
     // acumulado (cada uma é a única/primeira eliminação de uma partida nova).
-    const isolatedReactionMs = [2950, 500, 100];
+    const isolatedReactionMs = [450, 50, 100];
     let isolatedTotal = 0;
     for (const reactionMs of isolatedReactionMs) {
       const solo = new MatchStateManager();
       solo.start(0);
-      solo.tick(2500);
+      solo.tick(T0);
       const roach = solo.getSnapshot().activeRoaches[0]!;
       solo.tryEliminateRoach(roach.id, roach.spawnedAt + reactionMs);
       isolatedTotal += solo.getSnapshot().score;
@@ -137,24 +152,22 @@ describe("MatchStateManager — bônus de combo (FR-006, FR-007, SC-003, SC-004)
     const manager = new MatchStateManager();
     manager.start(0);
 
-    manager.tick(2500); // spawn A (deadline 5500)
+    manager.tick(T0); // spawn A (deadline T0+TRAVEL_DURATION_FLOOR_MS)
     const a = manager.getSnapshot().activeRoaches[0]!;
-    manager.tick(5000); // spawn B (deadline 8000)
+    manager.tick(T0 + SPAWN_INTERVAL_FLOOR_MS); // spawn B
     const b = manager.getSnapshot().activeRoaches.find((r) => r.id !== a.id)!;
 
-    const eA = 5450;
+    const eA = T0 + 450;
     manager.tryEliminateRoach(a.id, eA); // comboStreak -> 1 (B fica ativa, não é eliminada)
     const pointsA = SCORE_BASE_POINTS + reactionBonusPoints(eA - a.spawnedAt) + comboBonusPoints(1);
 
-    manager.tick(7500); // spawn C (B ainda segura: 7500-5000=2500 < 3000)
-    const c = manager.getSnapshot().activeRoaches.find((r) => r.id !== a.id && r.id !== b.id)!;
-
-    // B atinge o prazo exatamente aqui (8000-5000=3000) e rouba a comida — reseta o combo. O
-    // intervalo até a próxima eliminação de C será de só 550ms, bem menor que COMBO_WINDOW_MS
-    // (3000ms): se o reset por roubo não existisse, o timeout também não teria disparado a tempo.
+    // B atinge o prazo em b.spawnedAt + b.travelDurationMs e rouba a comida — reseta o combo.
     manager.tick(b.spawnedAt + b.travelDurationMs);
 
-    const eC = 8050;
+    manager.tick(b.spawnedAt + b.travelDurationMs + SPAWN_INTERVAL_FLOOR_MS); // spawn C
+    const c = manager.getSnapshot().activeRoaches.find((r) => r.id !== a.id && r.id !== b.id)!;
+
+    const eC = c.spawnedAt + 100;
     manager.tryEliminateRoach(c.id, eC); // comboStreak deveria reiniciar -> 1
     const pointsC = SCORE_BASE_POINTS + reactionBonusPoints(eC - c.spawnedAt) + comboBonusPoints(1);
 
@@ -172,9 +185,9 @@ describe("MatchStateManager — bônus de combo (FR-006, FR-007, SC-003, SC-004)
     manager.registerMissedClick();
     expect(manager.getSnapshot().score).toBe(scoreBeforeMiss); // FR-003: miss não altera score
 
-    manager.tick(7500); // spawn C
+    manager.tick(T0 + SPAWN_INTERVAL_FLOOR_MS * 2); // spawn C
     const c = manager.getSnapshot().activeRoaches[0]!;
-    const eC = 7600; // gap de 2100ms desde a última eliminação real (5500) — < COMBO_WINDOW_MS
+    const eC = T0 + SPAWN_INTERVAL_FLOOR_MS * 2 + 100; // gap de 1250ms desde a última eliminação real — < COMBO_WINDOW_MS
     manager.tryEliminateRoach(c.id, eC);
     const gained = manager.getSnapshot().score - scoreBeforeMiss;
 
@@ -185,12 +198,15 @@ describe("MatchStateManager — bônus de combo (FR-006, FR-007, SC-003, SC-004)
   test("combo reseta após um intervalo maior que COMBO_WINDOW_MS entre duas eliminações (FR-008c)", () => {
     const manager = new MatchStateManager();
     manager.start(0);
-    buildComboOfTwo(manager); // comboStreak -> 2, última eliminação em t=5500
+    buildComboOfTwo(manager); // comboStreak -> 2, última eliminação em T0+SPAWN_INTERVAL_FLOOR_MS+50
     const scoreAfterCombo = manager.getSnapshot().score;
 
-    manager.tick(7500); // spawn C
+    manager.tick(T0 + SPAWN_INTERVAL_FLOOR_MS * 2); // spawn C
     const c = manager.getSnapshot().activeRoaches[0]!;
-    const eC = 5500 + COMBO_WINDOW_MS + 1; // estoura a janela desde a última eliminação (t=5500)
+    // Estoura a janela desde a última eliminação real (T0+SPAWN_INTERVAL_FLOOR_MS+50). Como nenhum
+    // tick() intermediário acontece entre o spawn de C e sua eliminação aqui, C não corre risco de
+    // roubar a comida sozinho antes disso, mesmo que o "reactionMs" resultante pareça grande.
+    const eC = T0 + SPAWN_INTERVAL_FLOOR_MS + 50 + COMBO_WINDOW_MS + 1;
     manager.tryEliminateRoach(c.id, eC);
     const gained = manager.getSnapshot().score - scoreAfterCombo;
 
