@@ -70,6 +70,10 @@ export const HIGH_SCORE_STORAGE_KEY = "baratas-na-geladeira:high-score";
 // local (Top 5) — decisão revisada após validação manual de uma primeira versão com recorde único.
 export const HIGH_SCORE_RANKING_MAX_ENTRIES = 5;
 
+// specs/014-mute-som-jogo (data-model.md): chave namespaced usada por systems/AudioPreferenceStore.ts
+// para ler/escrever a preferência de mute em localStorage — mesmo padrão de HIGH_SCORE_STORAGE_KEY.
+export const AUDIO_MUTE_STORAGE_KEY = "baratas-na-geladeira:audio-muted";
+
 // Posições verticais das 3 prateleiras e horizontais dos 3 slots de comida por prateleira — grid
 // 3x3 (research.md §2), expressas como frações da resolução-base landscape original (960x600) e
 // aplicadas a GAME_WIDTH/GAME_HEIGHT — assim o grid mantém as mesmas proporções relativas em

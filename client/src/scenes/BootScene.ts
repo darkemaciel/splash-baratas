@@ -26,6 +26,10 @@ export class BootScene extends Phaser.Scene {
   async create(): Promise<void> {
     this.generatePlaceholderTextures();
     await this.loadHudFont();
+    // specs/014-mute-som-jogo (research.md §3): nenhuma Scene além da primeira do array é
+    // auto-iniciada pelo Phaser — AudioControlScene precisa ser lançada explicitamente aqui, assim
+    // como StartScene logo abaixo.
+    this.scene.launch("AudioControlScene");
     this.scene.start("StartScene");
   }
 
