@@ -1,31 +1,19 @@
 <!--
 Sync Impact Report
-- Version change: (unratified template) → 1.0.0
-- Rationale for MAJOR: Initial ratification — the prior file on disk contained only unfilled
-  template placeholders ([PROJECT_NAME], [PRINCIPLE_1_NAME], etc.), so this is the first
-  concrete constitution, not an amendment to an existing one.
-- Modified principles: n/a (first fill)
+- Version change: 1.0.0 → 1.1.0
+- Rationale for MINOR: Added a new principle (VIII); no existing principle was removed or
+  redefined incompatibly.
+- Modified principles: n/a
 - Added sections:
-  - Core Principles I–VII (project brief specified 7 principles; template's 5-slot scaffold
-    was extended to 7 to match, per the "respect a specified number" instruction)
-  - Governance (amendment procedure, versioning policy, compliance review, spec/plan/tasks
-    compatibility rule)
-- Removed sections:
-  - Generic [SECTION_2_NAME] / [SECTION_3_NAME] slots were omitted rather than filled with
-    placeholder content — every piece of guidance supplied maps onto one of the 7 principles
-    (stack → Principle VII, assets → Principle VI), leaving nothing distinct for those two
-    generic slots to hold. Deferred, not silently dropped: if a genuinely separate concern
-    (e.g. a Development Workflow / Review Process section) emerges later, add it as an
-    explicit amendment.
+  - Core Principle VIII (Confirmação prévia para mudanças críticas) — governs actions the AI
+    assistant (Claude Code) may take in this repo, requiring explicit user confirmation before
+    any critical/destructive/hard-to-reverse operation.
+- Removed sections: none
 - Templates checked for alignment:
-  - .specify/templates/plan-template.md — not present in repo yet; no action taken (n/a)
-  - .specify/templates/tasks-template.md — not present in repo yet; no action taken (n/a)
-  - .specify/templates/spec-template.md — not present in repo yet; no action taken (n/a)
-  (Only constitution-template.md / resolve-template.ps1 output existed under .specify/ at
-  amendment time. Re-run this check once the other templates are added to the repo.)
-- Follow-up TODOs:
-  - TODO(RATIFICATION_DATE): user did not state the original adoption date; set to the date
-    of this amendment (2026-09-12) since no earlier ratified version exists.
+  - .specify/templates/plan-template.md — still not present in repo; no action taken (n/a)
+  - .specify/templates/tasks-template.md — still not present in repo; no action taken (n/a)
+  - .specify/templates/spec-template.md — still not present in repo; no action taken (n/a)
+- Follow-up TODOs: none
 -->
 
 # Baratas na Geladeira Constitution
@@ -94,6 +82,18 @@ final substituir os placeholders.
 **Rationale**: fixar a stack evita decisões de infraestrutura recorrentes a cada feature e
 mantém o MVP deployável como site estático.
 
+### VIII. Confirmação prévia para mudanças críticas
+O assistente de IA (Claude Code) operando neste repositório NÃO DEVE executar mudanças críticas
+sem antes pedir confirmação explícita ao usuário. Consideram-se críticas: operações destrutivas
+ou de difícil reversão (`git push --force`, `reset --hard`, exclusão de branches/arquivos/
+tags), alterações em configuração de deploy/CI/produção, merges ou publicações que afetam
+sistemas compartilhados, e qualquer ação cujo efeito se propague para fora do working tree
+local. Ações locais e reversíveis (editar arquivos, criar branches, rodar testes) não exigem
+essa confirmação prévia.
+
+**Rationale**: decisões com impacto irreversível ou que afetam produção/colaboradores cabem ao
+usuário; o assistente deve propor e explicar, não executar por iniciativa própria.
+
 ## Governance
 
 Esta constituição rege todas as decisões de `/speckit-plan` e `/speckit-tasks` deste projeto.
@@ -116,4 +116,4 @@ acima. Complexidade que viole a Simplicidade Deliberada (Princípio IV) ou arris
 Responsividade do Clique (Princípio V) DEVE ser justificada explicitamente na spec/plan
 correspondente ou rejeitada.
 
-**Version**: 1.0.0 | **Ratified**: 2026-09-12 | **Last Amended**: 2026-09-12
+**Version**: 1.1.0 | **Ratified**: 2026-09-12 | **Last Amended**: 2026-09-26
