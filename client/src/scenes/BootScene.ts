@@ -1,9 +1,19 @@
 import Phaser from "phaser";
-import { GAME_HEIGHT, GAME_WIDTH, ROACH_VISUAL_RADIUS } from "../config/gameConfig";
+import { GAME_HEIGHT, GAME_WIDTH } from "../config/gameConfig";
 
 /**
- * Gera sprites placeholder em runtime (constitution Princípio VI — nenhuma arte final ainda
- * existe; quando houver, estas texturas geradas serão substituídas por arquivos em
+ * specs/016-animacao-locomocao-barata: quadros extraídos de docs/references/barata_caminhada.mp4 e
+ * barata_voo.mp4 (fundo removido), 128x128 px cada, barata voltada para a direita (cabeça levemente
+ * para cima). Desenhados em 2x — GameScene os exibe em escala 0.5 para casar com o tamanho da
+ * antiga bolinha placeholder (ROACH_VISUAL_RADIUS).
+ */
+export const ROACH_FRAME_SIZE_PX = 128;
+export const ROACH_WALK_ANIM = "roach-walk";
+export const ROACH_FLY_ANIM = "roach-fly";
+
+/**
+ * Carrega os assets e gera os sprites placeholder restantes em runtime (constitution Princípio VI —
+ * quando houver arte final, estas texturas geradas serão substituídas por arquivos em
  * client/public/assets/sprites, sem mudar o contrato de texture keys usado pelas outras scenes).
  */
 export class BootScene extends Phaser.Scene {
@@ -23,13 +33,18 @@ export class BootScene extends Phaser.Scene {
     this.load.audio("sfx-fly", "assets/audio/fly.mp3");
 
     // specs/015-cursor-pata-animada (research.md §1/§5, FR-008): primeira imagem de fato carregada
-    // de client/public/assets/sprites/ pelo jogo (as texturas de barata/comida/prateleira/fundo
-    // são geradas em runtime por generatePlaceholderTextures(), nunca carregadas de arquivo).
+    // de client/public/assets/sprites/ pelo jogo (as texturas de comida/prateleira/fundo são
+    // geradas em runtime por generatePlaceholderTextures(); a barata, desde specs/016, usa os
+    // spritesheets carregados logo abaixo).
     // paw.png (não .jpg — precisa de canal alfa real) já vem recortada e com fundo transparente. A
     // classe cursor-paw-ready (consumida pelo CSS de index.html) só é ligada no sucesso do
     // carregamento — se o arquivo falhar, a classe nunca é adicionada e o cursor nativo do sistema
     // permanece visível, sem precisar de nenhum handler de loaderror dedicado.
     this.load.image("cursor-paw", "assets/sprites/paw.png");
+
+    const frameConfig = { frameWidth: ROACH_FRAME_SIZE_PX, frameHeight: ROACH_FRAME_SIZE_PX };
+    this.load.spritesheet(ROACH_WALK_ANIM, "assets/sprites/roach-walk.png", frameConfig);
+    this.load.spritesheet(ROACH_FLY_ANIM, "assets/sprites/roach-fly.png", frameConfig);
     this.load.once("filecomplete-image-cursor-paw", () => {
       document.getElementById("game")?.classList.add("cursor-paw-ready");
     });
@@ -37,6 +52,7 @@ export class BootScene extends Phaser.Scene {
 
   async create(): Promise<void> {
     this.generatePlaceholderTextures();
+    this.createRoachAnimations();
     await this.loadHudFont();
     // specs/014-mute-som-jogo (research.md §3): nenhuma Scene além da primeira do array é
     // auto-iniciada pelo Phaser — AudioControlScene precisa ser lançada explicitamente aqui, assim
@@ -59,13 +75,26 @@ export class BootScene extends Phaser.Scene {
     await Promise.race([fontReady, timeout]);
   }
 
-  private generatePlaceholderTextures(): void {
-    const roach = this.make.graphics({ x: 0, y: 0 }, false);
-    roach.fillStyle(0x4a3728, 1);
-    roach.fillCircle(ROACH_VISUAL_RADIUS, ROACH_VISUAL_RADIUS, ROACH_VISUAL_RADIUS);
-    roach.generateTexture("roach", ROACH_VISUAL_RADIUS * 2, ROACH_VISUAL_RADIUS * 2);
-    roach.destroy();
+  /**
+   * specs/016-animacao-locomocao-barata: animações em loop (andar/voar). O hit-testing continua
+   * usando ROACH_VISUAL_RADIUS como raio fixo, nunca lendo pixels destas texturas.
+   */
+  private createRoachAnimations(): void {
+    this.anims.create({
+      key: ROACH_WALK_ANIM,
+      frames: this.anims.generateFrameNumbers(ROACH_WALK_ANIM),
+      frameRate: 15,
+      repeat: -1,
+    });
+    this.anims.create({
+      key: ROACH_FLY_ANIM,
+      frames: this.anims.generateFrameNumbers(ROACH_FLY_ANIM),
+      frameRate: 20,
+      repeat: -1,
+    });
+  }
 
+  private generatePlaceholderTextures(): void {
     const food = this.make.graphics({ x: 0, y: 0 }, false);
     food.fillStyle(0xffb703, 1);
     food.fillRoundedRect(0, 0, 60, 60, 10);
