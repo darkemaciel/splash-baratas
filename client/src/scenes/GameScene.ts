@@ -426,6 +426,12 @@ export class GameScene extends Phaser.Scene {
       matchStateManager.registerMissedClick(); // specs/004-sistema-pontuacao (FR-008b)
       this.sound.play("sfx-miss");
     }
+
+    // specs/015-cursor-pata-animada (contracts/cursor-scene.md, research.md §3, FR-004/FR-005/
+    // FR-007/FR-010): emitido só depois do hit-test já ter concluído, para nunca participar do
+    // caminho crítico do clique. Cliques em botões internos (ex.: o de pausa acima) já chamam
+    // event.stopPropagation() antes de chegar aqui, então nunca emitem este evento.
+    this.game.events.emit("cursor:strike");
   }
 
   /** FR-020: feedback visual breve de queda ao eliminar uma barata; specs/003: + som de acerto. */

@@ -21,6 +21,18 @@ export class BootScene extends Phaser.Scene {
     this.load.audio("sfx-miss", "assets/audio/miss.mp3");
     this.load.audio("sfx-steal", "assets/audio/steal.mp3");
     this.load.audio("sfx-fly", "assets/audio/fly.mp3");
+
+    // specs/015-cursor-pata-animada (research.md §1/§5, FR-008): primeira imagem de fato carregada
+    // de client/public/assets/sprites/ pelo jogo (as texturas de barata/comida/prateleira/fundo
+    // são geradas em runtime por generatePlaceholderTextures(), nunca carregadas de arquivo).
+    // paw.png (não .jpg — precisa de canal alfa real) já vem recortada e com fundo transparente. A
+    // classe cursor-paw-ready (consumida pelo CSS de index.html) só é ligada no sucesso do
+    // carregamento — se o arquivo falhar, a classe nunca é adicionada e o cursor nativo do sistema
+    // permanece visível, sem precisar de nenhum handler de loaderror dedicado.
+    this.load.image("cursor-paw", "assets/sprites/paw.png");
+    this.load.once("filecomplete-image-cursor-paw", () => {
+      document.getElementById("game")?.classList.add("cursor-paw-ready");
+    });
   }
 
   async create(): Promise<void> {
@@ -30,6 +42,7 @@ export class BootScene extends Phaser.Scene {
     // auto-iniciada pelo Phaser — AudioControlScene precisa ser lançada explicitamente aqui, assim
     // como StartScene logo abaixo.
     this.scene.launch("AudioControlScene");
+    this.scene.launch("CursorScene");
     this.scene.start("StartScene");
   }
 

@@ -74,6 +74,26 @@ export const HIGH_SCORE_RANKING_MAX_ENTRIES = 5;
 // para ler/escrever a preferência de mute em localStorage — mesmo padrão de HIGH_SCORE_STORAGE_KEY.
 export const AUDIO_MUTE_STORAGE_KEY = "baratas-na-geladeira:audio-muted";
 
+// specs/015-cursor-pata-animada: tamanho do botão de mute (AudioControlScene). Movidas para cá (de
+// AudioControlScene.ts) para servirem de única fonte de verdade — não têm mais relação com o
+// tamanho do cursor (ver CURSOR_PAW_HEIGHT_PX abaixo).
+export const AUDIO_BUTTON_FONT_SIZE_PX = 14;
+export const AUDIO_BUTTON_PADDING_Y_PX = 6;
+
+// specs/015-cursor-pata-animada (FR-001, research.md §4 — revisado após feedback de playtest):
+// a regra original amarrava o tamanho da pata a ~50% da altura do menor botão de menu (o de mute,
+// ~26px), resultando numa pata de ~13px — pequena demais para reconhecer a forma de uma pata com
+// garras. Decisão revisada: tamanho fixo e visível, desacoplado de qualquer botão. A pata é
+// centralizada no ponteiro (setOrigin(0.5) em CursorScene), então cobrir visualmente um botão
+// pequeno ao passar por cima dele não compromete o clique — o hit-test usa a posição real do
+// ponteiro, nunca o sprite da pata (FR-010). Escalado por UI_SCALE para manter proporção também na
+// base portrait (specs/006-responsividade-mobile).
+export const CURSOR_PAW_HEIGHT_PX = Math.round(56 * UI_SCALE);
+
+// specs/015-cursor-pata-animada (data-model.md § transições, FR-006): duração da animação de golpe
+// antes de a pata voltar ao estado idle.
+export const CURSOR_STRIKE_DURATION_MS = 150;
+
 // Posições verticais das 3 prateleiras e horizontais dos 3 slots de comida por prateleira — grid
 // 3x3 (research.md §2), expressas como frações da resolução-base landscape original (960x600) e
 // aplicadas a GAME_WIDTH/GAME_HEIGHT — assim o grid mantém as mesmas proporções relativas em

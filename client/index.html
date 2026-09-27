@@ -30,6 +30,14 @@
         height: 100%;
         background: #0d0d0d;
       }
+
+      /* specs/015-cursor-pata-animada (research.md §1): condicionada à classe cursor-paw-ready,
+         ligada só quando o asset da pata carrega com sucesso (BootScene) — nunca incondicional,
+         para que uma falha de load (FR-008) deixe o cursor nativo do sistema visível. Vence o
+         style.cursor inline que o Phaser escreve em botões com useHandCursor via !important. */
+      #game.cursor-paw-ready canvas {
+        cursor: none !important;
+      }
     </style>
   </head>
   <body>

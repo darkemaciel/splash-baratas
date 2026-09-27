@@ -7,6 +7,7 @@ import { GameScene } from "./src/scenes/GameScene";
 import { GameOverScene } from "./src/scenes/GameOverScene";
 import { PauseOverlayScene } from "./src/scenes/PauseOverlayScene";
 import { AudioControlScene } from "./src/scenes/AudioControlScene";
+import { CursorScene } from "./src/scenes/CursorScene";
 
 inject();
 
@@ -27,6 +28,16 @@ new Phaser.Game({
   // specs/014-mute-som-jogo (research.md §3): AudioControlScene DEVE ser a última entrada — a
   // posição no array define a ordem de renderização/prioridade de input do Phaser, garantindo que
   // o controle de mute fique sempre por cima de todas as outras Scenes, incluindo a overlay de
-  // PauseOverlayScene.
-  scene: [BootScene, StartScene, GameScene, GameOverScene, PauseOverlayScene, AudioControlScene],
+  // PauseOverlayScene. specs/015-cursor-pata-animada (contracts/cursor-scene.md § "Ciclo de vida"):
+  // CursorScene vai depois de AudioControlScene, pelo mesmo motivo — a pata renderiza e recebe
+  // pointermove por cima de tudo, inclusive do botão de mute.
+  scene: [
+    BootScene,
+    StartScene,
+    GameScene,
+    GameOverScene,
+    PauseOverlayScene,
+    AudioControlScene,
+    CursorScene,
+  ],
 });
