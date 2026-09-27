@@ -1,9 +1,13 @@
 import Phaser from "phaser";
-import { GAME_HEIGHT, GAME_WIDTH } from "../config/gameConfig";
+import {
+  AUDIO_BUTTON_FONT_SIZE_PX,
+  AUDIO_BUTTON_PADDING_Y_PX,
+  GAME_HEIGHT,
+  GAME_WIDTH,
+} from "../config/gameConfig";
 import { getMuted, setMuted } from "../systems/AudioPreferenceStore";
 
 const AUDIO_BUTTON_MARGIN = 12;
-const AUDIO_BUTTON_FONT_SIZE_PX = 14;
 
 const AUDIO_BUTTON_LABEL_ON = "🔊 Som";
 const AUDIO_BUTTON_LABEL_MUTED = "🔇 Mudo";
@@ -35,7 +39,7 @@ export class AudioControlScene extends Phaser.Scene {
         fontSize: `${AUDIO_BUTTON_FONT_SIZE_PX}px`,
         color: "#ffffff",
         backgroundColor: "#333333",
-        padding: { x: 10, y: 6 },
+        padding: { x: 10, y: AUDIO_BUTTON_PADDING_Y_PX },
       })
       .setOrigin(1, 1)
       .setInteractive({ useHandCursor: true });

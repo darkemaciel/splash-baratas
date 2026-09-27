@@ -11,6 +11,7 @@ import {
 import { elapsedMs, formatElapsedTime, shelfIndexFromId, type RiskLevel } from "../entities/Match";
 import { positionAt, progress, type Roach } from "../entities/Roach";
 import type { FoodItem } from "../entities/FoodItem";
+import { ROACH_FLY_ANIM, ROACH_WALK_ANIM } from "./BootScene";
 import { pickTopmostHit, type RoachHitTestInput } from "../systems/CollisionSystem";
 import { matchStateManager, type MatchSnapshot } from "../systems/MatchStateManager";
 
@@ -53,6 +54,19 @@ const TREMOR_MAX_OFFSET_PX = 4;
 const TREMOR_BASE_FREQUENCY_HZ = 6;
 const TREMOR_MAX_FREQUENCY_HZ = 14;
 
+// specs/016-animacao-locomocao-barata (contracts/roach-locomotion.md § "Entrada única do cálculo
+// de ângulo"): oscilação de locomoção com amplitude CONSTANTE desde o spawn (ao contrário do
+// "juice" acima, que cresce com `progress`) — canal `angle`, isolado de `scale`/posição.
+const FLY_LOCOMOTION_TILT_MAX_DEG = 6;
+const FLY_LOCOMOTION_FREQUENCY_HZ = 6;
+const WALK_LOCOMOTION_TILT_MAX_DEG = 10;
+const WALK_LOCOMOTION_FREQUENCY_HZ = 2.2;
+// Spritesheets desenhados em 2x (128px, corpo ~80px) — 0.5 deixa o corpo com ~40px, o mesmo
+// diâmetro da antiga bolinha (ROACH_VISUAL_RADIUS * 2).
+const ROACH_SPRITE_SCALE = 0.5;
+// Direção para onde a barata "olha" nos quadros de origem (direita, cabeça ~25° para cima).
+const ROACH_SPRITE_FORWARD_DEG = -25;
+
 // specs/009-pausar-partida (contracts/pause-lifecycle.md): botão de pausa no canto superior
 // esquerdo, espelhando a margem/altura já usadas pelo HUD de vida no canto superior direito —
 // mesma faixa vertical (acima de HUD_BAR_TOP_Y), fora da área das prateleiras.
@@ -65,7 +79,9 @@ const PAUSE_BUTTON_FONT_SIZE_PX = 16;
  */
 export class GameScene extends Phaser.Scene {
   private foodSprites = new Map<string, Phaser.GameObjects.Image>();
-  private roachSprites = new Map<string, Phaser.GameObjects.Image>();
+  private roachSprites = new Map<string, Phaser.GameObjects.Sprite>();
+  /** specs/016-animacao-locomocao-barata (data-model.md): sorteado uma vez por barata, nunca re-sorteado. */
+  private roachLocomotionStyles = new Map<string, "andando" | "voando">();
   private unsubscribers: Array<() => void> = [];
   private hudText!: Phaser.GameObjects.Text;
   private hudBar!: Phaser.GameObjects.Graphics;
@@ -368,6 +384,38 @@ export class GameScene extends Phaser.Scene {
     return { dx, dy };
   }
 
+  /**
+   * specs/016-animacao-locomocao-barata (research.md §3/§4, contracts/roach-locomotion.md):
+   * rotação procedural com amplitude CONSTANTE (não escalada por `progress`) — a locomoção já
+   * está em execução desde o primeiro frame (FR-001), ao contrário do "juice" acima. Canal
+   * (`angle`) isolado de `scale`/posição, nunca lido de volta pelo hit-testing (FR-005).
+   */
+  private computeRoachLocomotionAngle(
+    roach: Roach,
+    now: number,
+    estilo: "andando" | "voando",
+  ): number {
+    const maxDeg = estilo === "andando" ? WALK_LOCOMOTION_TILT_MAX_DEG : FLY_LOCOMOTION_TILT_MAX_DEG;
+    const frequency =
+      estilo === "andando" ? WALK_LOCOMOTION_FREQUENCY_HZ : FLY_LOCOMOTION_FREQUENCY_HZ;
+    const phase = this.roachPhase(roach.id);
+    return maxDeg * Math.sin((now / 1000) * frequency * 2 * Math.PI + phase);
+  }
+
+  /**
+   * Orienta a barata na direção do trajeto (spawnPoint → alvo, fixo desde o spawn). Espelha no
+   * eixo X quando ela segue para a esquerda, para nunca ficar de cabeça para baixo.
+   */
+  private applyRoachHeading(sprite: Phaser.GameObjects.Sprite, roach: Roach, target: Point): void {
+    const headingDeg = Phaser.Math.RadToDeg(
+      Math.atan2(target.y - roach.spawnPoint.y, target.x - roach.spawnPoint.x),
+    );
+    const movingLeft = Math.abs(headingDeg) > 90;
+    sprite.setFlipX(movingLeft);
+    const forwardDeg = movingLeft ? 180 - ROACH_SPRITE_FORWARD_DEG : ROACH_SPRITE_FORWARD_DEG;
+    sprite.setAngle(headingDeg - forwardDeg);
+  }
+
   private syncRoachSprites(snapshot: MatchSnapshot): void {
     const activeIds = new Set(snapshot.activeRoaches.map((roach) => roach.id));
 
@@ -375,6 +423,7 @@ export class GameScene extends Phaser.Scene {
       if (!activeIds.has(id)) {
         sprite.destroy();
         this.roachSprites.delete(id);
+        this.roachLocomotionStyles.delete(id);
       }
     }
 
@@ -389,12 +438,24 @@ export class GameScene extends Phaser.Scene {
       const tremor = this.computeRoachTremorOffset(roach, now);
       let sprite = this.roachSprites.get(roach.id);
       if (!sprite) {
-        sprite = this.add.image(position.x + tremor.dx, position.y + tremor.dy, "roach");
+        // specs/016-animacao-locomocao-barata (contracts/roach-locomotion.md § "Estilo de
+        // locomoção: sorteio e estabilidade"): sorteado uma única vez, no momento da criação do
+        // sprite — nunca re-sorteado depois.
+        const estiloSorteado = Math.random() < 0.5 ? "andando" : "voando";
+        const animKey = estiloSorteado === "andando" ? ROACH_WALK_ANIM : ROACH_FLY_ANIM;
+        sprite = this.add.sprite(position.x + tremor.dx, position.y + tremor.dy, animKey);
+        // Quadro inicial aleatório para que baratas simultâneas não se movam em sincronia.
+        const frameCount = this.anims.get(animKey)?.getTotalFrames() ?? 1;
+        sprite.play({ key: animKey, startFrame: Phaser.Math.Between(0, frameCount - 1) });
         this.roachSprites.set(roach.id, sprite);
+        this.roachLocomotionStyles.set(roach.id, estiloSorteado);
       } else {
         sprite.setPosition(position.x + tremor.dx, position.y + tremor.dy);
       }
-      sprite.setScale(squash.scaleX, squash.scaleY);
+      sprite.setScale(squash.scaleX * ROACH_SPRITE_SCALE, squash.scaleY * ROACH_SPRITE_SCALE);
+      const estilo = this.roachLocomotionStyles.get(roach.id) ?? "voando";
+      this.applyRoachHeading(sprite, roach, targetPosition);
+      sprite.angle += this.computeRoachLocomotionAngle(roach, now, estilo);
     }
   }
 
@@ -426,6 +487,12 @@ export class GameScene extends Phaser.Scene {
       matchStateManager.registerMissedClick(); // specs/004-sistema-pontuacao (FR-008b)
       this.sound.play("sfx-miss");
     }
+
+    // specs/015-cursor-pata-animada (contracts/cursor-scene.md, research.md §3, FR-004/FR-005/
+    // FR-007/FR-010): emitido só depois do hit-test já ter concluído, para nunca participar do
+    // caminho crítico do clique. Cliques em botões internos (ex.: o de pausa acima) já chamam
+    // event.stopPropagation() antes de chegar aqui, então nunca emitem este evento.
+    this.game.events.emit("cursor:strike");
   }
 
   /** FR-020: feedback visual breve de queda ao eliminar uma barata; specs/003: + som de acerto. */
