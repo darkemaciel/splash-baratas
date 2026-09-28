@@ -170,12 +170,19 @@ export class GameScene extends Phaser.Scene {
 
   /** specs/009-pausar-partida (contracts/pause-lifecycle.md § "Gatilhos e transições"). */
   private triggerPause(): void {
+    // specs/018 (FR-013/FR-014): o proxy de teclado do botão Pausar continua focável com a partida
+    // pausada — um Enter nele não pode relançar a overlay sobre a que já está aberta.
+    if (this.scene.isPaused()) {
+      return;
+    }
     // specs/017: o botão aparece no estado ativo enquanto a partida está pausada (FR-015). A Scene
     // pausada continua sendo desenhada, só o update e o input param.
     this.pauseButton.setAtivo(true);
     this.sound.pauseAll();
     this.scene.pause();
-    this.scene.launch("PauseOverlayScene");
+    // specs/018-navegacao-pausa-fim (research §2): o relógio lógico no instante da pausa vai junto,
+    // para que ENCERRAR PARTIDA congele o tempo exatamente onde o HUD estava.
+    this.scene.launch("PauseOverlayScene", { pausedAtLogicalMs: this.logicalNow() });
   }
 
   /**

@@ -121,6 +121,23 @@ export class MatchStateManager {
   }
 
   /**
+   * specs/018-navegacao-pausa-fim (FR-005/FR-006, research §1): o jogador encerra a partida em
+   * andamento pela pausa. Segue exatamente o caminho de uma derrota — status "lost", cronômetro
+   * congelado em `now` e o mesmo evento `match:lost` — para que o fim de jogo, o nome e o ranking
+   * funcionem sem distinção. Pontuação, combo e comidas ficam como estavam. Idempotente: fora de
+   * uma partida em andamento não faz nada e devolve `false`.
+   */
+  forfeit(now: number): boolean {
+    if (this.match.status !== "playing") {
+      return false;
+    }
+    this.match.endedAt = now;
+    this.match.status = "lost";
+    this.emit("match:lost", this.getSnapshot());
+    return true;
+  }
+
+  /**
    * FR-003/FR-005/FR-009/FR-021: spawna baratas na cadência fixa, sem exceder uma barata ativa
    * por comida presente. FR-007/FR-008: baratas cujo tempo de viagem se esgota roubam a comida.
    * FR-010/FR-014: ao roubar a última comida, a partida entra em derrota e para de spawnar.

@@ -34,6 +34,10 @@ export interface Button {
   width: number;
   height: number;
   setDepth(depth: number): Button;
+  /** Move o botão inteiro (desenho, zona de clique e base do hover) — specs/018 (research §7). */
+  setPosition(x: number, y: number): Button;
+  /** Foca o proxy acessível (specs/018 FR-015a: foco do teclado ao abrir/fechar diálogos). */
+  focus(): Button;
   destroy(): void;
 }
 
@@ -65,6 +69,8 @@ function capitalize(text: string): string {
 
 export function createButton(scene: Phaser.Scene, x: number, y: number, options: ButtonOptions): Button {
   const { variant, size, bolha, pilha = false, baseAngle = 0 } = options;
+  let baseX = x;
+  let baseY = y;
   const cores = CORES[variant];
   const dims = TAMANHOS[size];
 
@@ -106,13 +112,13 @@ export function createButton(scene: Phaser.Scene, x: number, y: number, options:
     tween?.stop();
     const duration = uiTweenMs(TRANSITION_MS);
     if (duration === 0) {
-      root.setPosition(x + offset, y + offset).setAngle(angle).setScale(1, scaleY);
+      root.setPosition(baseX + offset, baseY + offset).setAngle(angle).setScale(1, scaleY);
       return;
     }
     tween = scene.tweens.add({
       targets: root,
-      x: x + offset,
-      y: y + offset,
+      x: baseX + offset,
+      y: baseY + offset,
       angle,
       scaleY,
       duration,
@@ -157,6 +163,20 @@ export function createButton(scene: Phaser.Scene, x: number, y: number, options:
     setDepth(depth) {
       root.setDepth(depth);
       zone.setDepth(depth);
+      return button;
+    },
+    setPosition(nextX, nextY) {
+      tween?.stop();
+      baseX = nextX;
+      baseY = nextY;
+      root.setPosition(baseX, baseY).setAngle(baseAngle).setScale(1, 1);
+      zone.setPosition(baseX, baseY);
+      pressed = false;
+      draw("normal");
+      return button;
+    },
+    focus() {
+      proxy.focus();
       return button;
     },
     destroy() {

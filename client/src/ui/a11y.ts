@@ -11,6 +11,8 @@ export interface A11yProxy {
   setLabel(label: string): void;
   /** `null` remove o atributo aria-pressed (botão sem estado de alternância). */
   setPressed(pressed: boolean | null): void;
+  /** Move o foco do teclado para este proxy (specs/018 FR-015a). */
+  focus(): void;
   destroy(): void;
 }
 
@@ -26,6 +28,7 @@ let proxiesEnabled = true;
 const NOOP_PROXY: A11yProxy = {
   setLabel: () => {},
   setPressed: () => {},
+  focus: () => {},
   destroy: () => {},
 };
 
@@ -76,8 +79,21 @@ export function createA11yProxy(scene: Phaser.Scene, options: A11yProxyOptions):
         button.setAttribute("aria-pressed", String(pressed));
       }
     },
+    focus: () => button.focus(),
     destroy,
   };
+}
+
+/**
+ * specs/018-navegacao-pausa-fim (FR-015a, research §8a): `true` quando o foco do teclado está num
+ * proxy — ou seja, a ação em curso veio de Tab + Enter/Espaço, não de mouse ou toque.
+ */
+export function isProxyFocused(): boolean {
+  if (typeof document === "undefined") {
+    return false;
+  }
+  const active = document.activeElement;
+  return active instanceof HTMLButtonElement && active.parentElement?.id === "ui-a11y";
 }
 
 /**

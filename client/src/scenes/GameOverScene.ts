@@ -36,6 +36,8 @@ export class GameOverScene extends Phaser.Scene {
   private cursorVisible = true;
   private cursorTimer?: Phaser.Time.TimerEvent;
   private contentTop = 0;
+  /** specs/018 (FR-014): trava de saída — DE NOVO! e MENU são mutuamente exclusivos. */
+  private leaving = false;
 
   constructor() {
     super("GameOverScene");
@@ -55,6 +57,7 @@ export class GameOverScene extends Phaser.Scene {
     // specs/004-sistema-pontuacao (FR-010): pontuação final.
     const { score } = matchStateManager.getSnapshot();
     this.typedName = "";
+    this.leaving = false;
     this.showNameEntry(score);
   }
 
@@ -199,12 +202,43 @@ export class GameOverScene extends Phaser.Scene {
       cursorY += messagePill.height + ESPACO.e12;
     }
 
+    const unsubscribe = matchStateManager.on("match:started", () => {
+      unsubscribe();
+      this.scene.start("GameScene");
+    });
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, unsubscribe);
+
+    // specs/018-navegacao-pausa-fim (FR-008 a FR-010, FR-014): DE NOVO! + MENU. Criados antes do
+    // cartão para medir a altura da linha de ações; posicionados no fim com setPosition.
+    const playAgain = createButton(this, centerX, 0, {
+      label: "DE NOVO!",
+      variant: "primario",
+      size: "m",
+      bolha: "a",
+      a11yLabel: "De novo!",
+      onActivate: () => this.leave(() => matchStateManager.restart(this.time.now)),
+    });
+    const menu = createButton(this, centerX, 0, {
+      label: "MENU",
+      variant: "secundario",
+      size: "m",
+      bolha: "b",
+      a11yLabel: "Menu",
+      onActivate: () => this.leave(() => this.scene.start("StartScene")),
+    });
+    // Lado a lado se couberem na largura útil (sempre, na paisagem); senão, empilhados com DE NOVO!
+    // em cima — só acontece no retrato, que tem altura de sobra.
+    const rowWidth = playAgain.width + ESPACO.e16 + menu.width;
+    const sideBySide = rowWidth <= GAME_WIDTH - 2 * ESPACO.hudLateral;
+    const actionsHeight = sideBySide
+      ? Math.max(playAgain.height, menu.height)
+      : playAgain.height + ESPACO.e12 + menu.height;
+
     const cardWidth = Math.min(TAMANHO.cartaoResultado, GAME_WIDTH - 2 * ESPACO.hudLateral);
     const rows = this.rankingRows(ranking);
-    const buttonHeightEstimate = TAMANHO.toqueMinimo + 12;
     let card = createResultCard(this, centerX, 0, { width: cardWidth, rows, title: "TOP 5" });
     for (const rowPaddingY of [4, 2]) {
-      const bottom = cursorY + card.height + gap + buttonHeightEstimate;
+      const bottom = cursorY + card.height + gap + actionsHeight;
       if (bottom <= GAME_HEIGHT - BOTTOM_MARGIN) {
         break;
       }
@@ -214,20 +248,23 @@ export class GameOverScene extends Phaser.Scene {
     card.root.setY(cursorY + card.height / 2);
     cursorY += card.height + gap;
 
-    const unsubscribe = matchStateManager.on("match:started", () => {
-      unsubscribe();
-      this.scene.start("GameScene");
-    });
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, unsubscribe);
+    if (sideBySide) {
+      const rowCenterY = cursorY + actionsHeight / 2;
+      playAgain.setPosition(centerX - rowWidth / 2 + playAgain.width / 2, rowCenterY);
+      menu.setPosition(centerX + rowWidth / 2 - menu.width / 2, rowCenterY);
+    } else {
+      playAgain.setPosition(centerX, cursorY + playAgain.height / 2);
+      menu.setPosition(centerX, cursorY + playAgain.height + ESPACO.e12 + menu.height / 2);
+    }
+  }
 
-    createButton(this, centerX, cursorY + buttonHeightEstimate / 2, {
-      label: "DE NOVO!",
-      variant: "primario",
-      size: "m",
-      bolha: "a",
-      a11yLabel: "De novo!",
-      onActivate: () => matchStateManager.restart(this.time.now),
-    });
+  /** FR-014: só a primeira ação de saída (DE NOVO! ou MENU) vale; as seguintes são ignoradas. */
+  private leave(action: () => void): void {
+    if (this.leaving) {
+      return;
+    }
+    this.leaving = true;
+    action();
   }
 
   /** Sempre `HIGH_SCORE_RANKING_MAX_ENTRIES` linhas; slots vazios mostram "---" sem valor. */

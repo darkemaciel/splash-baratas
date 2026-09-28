@@ -81,6 +81,8 @@ export const TAMANHO = {
   cartaoResultado: 400,
   toqueMinimo: 44,
   energiaAltura: 28,
+  /** Diálogo de confirmação: painel de 400px (design-system/components/Dialogo/README.md). */
+  dialogo: 400,
 } as const;
 
 export const MOVIMENTO = {
