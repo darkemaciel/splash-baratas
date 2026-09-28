@@ -3,32 +3,24 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Baratas na Geladeira</title>
+    <title>Borges e as Baratas</title>
     <style>
-      /* specs/005-hud-vida-vertical (research.md §3): fonte cartunesca do HUD, self-hosted
-         (Princípio VI). font-weight: 700 casa com o document.fonts.load('bold ...') em
-         BootScene — sem isso o gate de carregamento não encontra a face registrada. */
-      @font-face {
-        font-family: "Fredoka";
-        src: url("/assets/fonts/Fredoka-Bold.woff2") format("woff2");
-        font-weight: 700;
-        font-style: normal;
-        font-display: swap;
-      }
+      /* specs/017-design-system-grotesco (research §2): as fontes (Luckiest Guy + Baloo 2) vêm do
+         @font-face de src/styles/tokens.css, importado em index.ts — não há mais @font-face aqui. */
 
       html, body {
         margin: 0;
         padding: 0;
         width: 100%;
         height: 100%;
-        background: #0d0d0d;
+        background: var(--cor-traco, #1b1b1b);
         overflow-x: auto;
       }
 
       #game {
         width: 100%;
         height: 100%;
-        background: #0d0d0d;
+        background: var(--cor-traco, #1b1b1b);
       }
 
       /* specs/015-cursor-pata-animada (research.md §1): condicionada à classe cursor-paw-ready,
@@ -38,10 +30,26 @@
       #game.cursor-paw-ready canvas {
         cursor: none !important;
       }
+
+      /* specs/017-design-system-grotesco (research §7): proxies DOM dos botões do canvas — dão
+         rótulo acessível e foco por teclado sem nunca ficar por cima do canvas (a pata e o clique
+         continuam só no canvas). */
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+        border: 0;
+      }
     </style>
   </head>
   <body>
     <div id="game"></div>
+    <div id="ui-a11y" aria-label="Controles do jogo"></div>
     <script type="module" src="/index.ts"></script>
   </body>
 </html>

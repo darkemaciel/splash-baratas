@@ -1,0 +1,24 @@
+<!-- @dsCard group="Ações" height=280 -->
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+body{margin:0;background:var(--cor-creme);font-family:var(--font-texto);color:var(--cor-traco)}
+.w{padding:28px 32px;display:flex;flex-wrap:wrap;gap:28px 34px;align-items:flex-end}
+.col{display:flex;flex-direction:column;gap:8px;align-items:center}
+.leg{font-size:13px;font-weight:700;color:var(--cor-legenda)}
+
+</style></head><body><div id="root"></div>
+<script>
+var h=React.createElement, G=window.GrotescoSurreal;
+function Leg(t,el){return h("div",{className:"col"},el,h("span",{className:"leg"},t));}
+ReactDOM.createRoot(document.getElementById("root")).render(
+h("div",{className:"w"},
+ Leg("Normal",h(G.BotaoIcone,{icone:"pausar",rotulo:"Pausar"})),
+ Leg("Hover",h(G.BotaoIcone,{icone:"pausar",rotulo:"Pausar",estado:"hover"})),
+ Leg("Pressionado",h(G.BotaoIcone,{icone:"pausar",rotulo:"Pausar",estado:"pressionado"})),
+ Leg("Ativo",h(G.BotaoIcone,{icone:"pausar",rotulo:"Pausar",ativo:true})),
+ Leg("Desabilitado",h(G.BotaoIcone,{icone:"pausar",rotulo:"Pausar",disabled:true})),
+ h("div",{style:{flexBasis:"100%"}}),
+ ["jogar","recomecar","menu","opcoes","musica","som","fechar","estrela","tempo"].map(function(n){return h("div",{key:n},Leg(n,h(G.BotaoIcone,{icone:n,rotulo:n})));})
+)
+);
+</script></body></html>

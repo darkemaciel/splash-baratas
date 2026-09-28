@@ -1,0 +1,30 @@
+<!-- @dsCard group="Movimento" height=410 -->
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+body{margin:0;background:var(--cor-ceu);font-family:var(--font-texto);color:var(--cor-traco)}
+.w{padding:24px 32px;display:flex;flex-wrap:wrap;gap:20px 40px;align-items:flex-end}
+.col{display:flex;flex-direction:column;gap:6px;align-items:center}
+.leg{font-size:13px;font-weight:700;color:var(--cor-legenda)}
+.pista{position:relative;width:100%;height:84px;border-top:3px solid var(--cor-traco);background:var(--cor-limao)}
+.corre{position:absolute;top:10px;left:0;animation:corre 3s linear infinite}
+@keyframes corre{from{transform:translateX(-80px)}to{transform:translateX(900px)}}
+@media (prefers-reduced-motion: reduce){.corre{animation:none;left:40%}}
+</style></head><body><div id="root"></div>
+<script>
+var h=React.createElement, G=window.GrotescoSurreal;
+function Leg(t,el){return h("div",{className:"col"},el,h("span",{className:"leg"},t));}
+function Demo(){
+  var st=React.useState(false), el=st[0];
+  return h("div",null,
+    h("div",{className:"w"},
+      Leg("Andando · 27 quadros · 15 fps",h(G.Barata,{modo:"andando",tamanho:96})),
+      Leg("Voando · 16 quadros · 20 fps",h(G.Barata,{modo:"voando",tamanho:96,fase:1})),
+      Leg("Perto da comida · agitação 1",h(G.Barata,{modo:"andando",tamanho:96,agitacao:1,fase:2})),
+      Leg("Para a esquerda",h(G.Barata,{modo:"voando",tamanho:96,direcao:"esquerda",fase:3})),
+      Leg("Clique: eliminada (cai 40px, 200ms)",h("button",{type:"button",onClick:function(){st[1](!el);},style:{background:"none",border:0,padding:0,cursor:"pointer"}},h(G.Barata,{modo:"andando",tamanho:96,eliminada:el,fase:4})))
+    ),
+    h("div",{className:"pista"},h("div",{className:"corre"},h(G.Barata,{modo:"andando",tamanho:64,agitacao:0.4})))
+  );
+}
+ReactDOM.createRoot(document.getElementById("root")).render(h(Demo));
+</script></body></html>

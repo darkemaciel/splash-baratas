@@ -1,4 +1,4 @@
-# Backlog — Baratas na Geladeira
+# Backlog — Borges e as Baratas
 
 Este backlog reúne ideias de melhoria e novas features para o jogo, identificadas durante a
 especificação do MVP (`specs/001-roach-fridge-clicker/spec.md`) e em uma sessão de brainstorm
@@ -93,7 +93,7 @@ da constitution.
 | Error tracking (ex. Sentry) | Captura de exceções em produção — hoje bugs em prod só apareceriam via feedback manual do jogador. | Baixo | Médio | Baixo | **P1** |
 | Monitoramento real de FPS/Web Vitals | Instrumentar quedas de frame rate em campo, já que o PRD trata performance como requisito crítico (seção 6) mas hoje só é validado manualmente. | Médio | Médio | Médio | **P2** |
 | Object pooling de sprites | Reaproveitar `Phaser.GameObjects.Image` de baratas/comida em vez de criar/destruir a cada spawn/roubo — relevante principalmente se "modo infinito" (item da seção 2) for priorizado e partidas ficarem longas. | Médio | Médio | Médio | **P2** |
-| Substituir sprites placeholder por arte final | `client/public/assets/sprites/` hoje usa placeholders (ver CLAUDE.md); arte final melhora percepção de qualidade sem tocar lógica. | Baixo | Alto | Médio | **P2** (depende de arte pronta) |
+| Substituir sprites placeholder por arte final | `client/public/assets/sprites/` hoje usa placeholders (ver CLAUDE.md); arte final melhora percepção de qualidade sem tocar lógica. **Parcial via `specs/017-design-system-grotesco`**: fundo da geladeira, prateleiras e comidas passaram para a paleta e o traço do design system; a barata e a pata continuam pendentes (ver "Redesenho dos sprites com traço de 3,5px", seção 8). | Baixo | Alto | Médio | **P2** (depende de arte pronta) |
 | Internacionalização (PT/EN) | Externalizar strings hoje hardcoded nas scenes (`GameOverScene`, `StartScene`) para permitir outro idioma. Só relevante se houver intenção de público fora do Brasil. | Baixo | Baixo | Médio | **P3** |
 
 ## 7. Backend, persistência e monetização (fase futura)
@@ -108,6 +108,29 @@ virar spec sem uma decisão de produto explícita primeiro.
 | Contas/autenticação de jogador | Explicitamente fora de escopo no PRD (seção 4: "sistema completo de contas, perfis e autenticação"). | Alto | Baixo | Alto | **P3** |
 | Multiplayer/competitivo | Explicitamente fora de escopo no PRD (seção 4). | Alto | Baixo | Alto | **P3** |
 | Monetização (anúncios, cosméticos pagos) | Explicitamente fora de escopo no PRD (seção 4: "monetização, compras dentro do jogo e anúncios"). Risco alto de prejudicar a validação de diversão se introduzida cedo. | Alto | Baixo | Médio | **P3** |
+
+## 8. Design system "Grotesco Surreal" (peças fora da spec 017)
+
+Peças do design system em `docs/borges-design-system/` que ficaram fora de
+`specs/017-design-system-grotesco` (que só reestiliza as telas e controles já existentes). As
+referências visuais de cada uma estão em `docs/borges-design-system/design-system/components/`.
+
+| Item | Descrição | Risco | Pontuação | Esforço | Prioridade |
+|---|---|---|---|---|---|
+| Tela de Opções | Painel de 560px com linhas de ajuste (Música, Efeitos sonoros, Vibração, Legendas, Idioma) separadas por tracejado, botão Fechar e VOLTAR/SALVAR no rodapé, acessado por OPÇÕES no menu inicial (Tela 05, componentes Alternar, Nivel e Seletor). Absorve o controle de mute atual e depende de o jogo ter música/vibração/legendas/idiomas para ter conteúdo real. | Baixo | Médio | Médio | **P2** |
+| REINICIAR e ENCERRAR PARTIDA na pausa | Completar o painel de pausa da Tela 03 com REINICIAR (secundário) e ENCERRAR PARTIDA (terciário, levando ao fim de jogo) abaixo de CONTINUAR. | Baixo | Médio | Baixo | **P1** |
+| DE NOVO! + MENU no fim de jogo | Segundo botão MENU (secundário, bolha B) ao lado de DE NOVO!, voltando ao menu inicial sem recarregar a página (fluxo da Tela 04). | Baixo | Médio | Baixo | **P1** |
+| Estrelas no cartão de resultado | Avaliação de 0 a 3 estrelas (preenchidas em limão) no cartão de resultado, com texto acessível "2 de 3 estrelas". Precisa de uma regra de produto para os limiares de cada estrela. | Médio | Médio | Baixo | **P2** |
+| Personagem Borges e expressões | Personagem provisório (bolha creme, boca magenta) com pose de jogo e expressões feliz, susto e tonto, já em `client/public/assets/ui/personagem/`. Usos sugeridos: acenando no menu, reagindo a roubos e tonto no fim de jogo. | Baixo | Médio | Médio | **P2** |
+| Pontuação flutuante "+50!" | Número com contorno que sobe 48px e some em 720ms, inclinado 8°, no ponto em que a barata foi eliminada. Não pode atrasar o clique (Princípio V) e não anima com movimento reduzido. | Baixo | Alto | Baixo | **P1** |
+| Selo de combo | Selo com o multiplicador de combo (`selo-combo.svg`, texto de 26px girado -8°), aproveitando o combo que já existe na pontuação. | Baixo | Médio | Baixo | **P2** |
+| Barra de energia | Componente BarraEnergia (trilho em pílula, preenchimento magenta, rótulo). Hoje não há mecânica de energia; só faz sentido junto com uma mecânica nova (ex.: poder especial) ou como substituta da barra de risco. | Médio | Baixo | Baixo | **P3** |
+| Balão de dica | Balão com o prefixo "DICA:" em vermelho para dicas curtas. Casa com o item "Tutorial/onboarding na primeira partida" (seção 3). | Baixo | Médio | Baixo | **P2** |
+| Cenário céu/chão/morro | Cenário do pré-design (céu chapado com nuvens, chão limão em diagonal, morro mato). Conflita com o tema da geladeira; avaliar como fundo do menu ou como reinterpretação do interior da geladeira. | Baixo | Baixo | Médio | **P3** |
+| Botões de ação PULA!/AGARRA! | Botões de ação do canto inferior direito da Tela 02. São mecânicas de exemplo do pré-design e não existem no jogo; só entram se uma mecânica nova for especificada. | Alto | Baixo | Alto | **P3** |
+| Redesenho dos sprites com traço de 3,5px | Redesenhar pata e baratas (andar/voar) no estilo do design system: cores chapadas e contorno preto de 3,5px, mantendo o número de quadros. Complementa "Aprimorar animações da barata" (seção 1) e "Substituir sprites placeholder por arte final" (seção 6). | Baixo | Alto | Alto | **P2** (depende de arte pronta) |
+| Layouts para outros tamanhos de tela | O pré-design cobre só 960×540. Faltam composições dedicadas para outros tamanhos (ex.: retrato 480×960, telas ultralargas). | Médio | Médio | Médio | **P2** |
+| Área de toque de 44px em controles pequenos | Bolhas de nível (34px) e setas do seletor (38px) precisam de área clicável de pelo menos 44px. Só se aplica quando a tela de Opções for implementada. | Baixo | Baixo | Baixo | **P3** |
 
 ---
 

@@ -1,0 +1,56 @@
+<!-- @dsCard height=300 -->
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--cor-creme); overflow: hidden; }
+  .cover { position: relative; width: 960px; height: 300px; }
+  svg { position: absolute; left: 0; top: 0; }
+  .ceu { fill: var(--cor-ceu); }
+  .chao { fill: var(--cor-limao); }
+  .vermelho { fill: var(--cor-vermelho); }
+  .magenta { fill: var(--cor-magenta); }
+  .branco { fill: var(--cor-branco); }
+  .sombra { fill: var(--cor-traco); }
+  .contorno { stroke: var(--cor-traco); stroke-width: var(--traco-ui); stroke-linejoin: round; stroke-linecap: round; }
+  .linha { fill: none; stroke: var(--cor-traco); stroke-width: var(--traco-ui); stroke-linecap: round; }
+  .text { position: absolute; left: 40px; bottom: 36px; max-width: 440px; }
+  h1 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 80px; line-height: .95; color: var(--cor-traco); text-transform: uppercase; transform: rotate(-3deg); transform-origin: left bottom; }
+  p { margin: 16px 0 0; font-family: var(--font-texto); font-weight: 700; font-size: 14px; color: var(--cor-legenda); }
+</style>
+</head>
+<body>
+<div class="cover">
+  <svg width="960" height="300" viewBox="0 0 960 300" aria-hidden="true">
+    <!--
+      blocks: cor-ceu sky 480×300 and a cor-limao ground cut by a diagonal horizon (the direction's signature), plus three bubbles in cor-vermelho, cor-magenta and cor-branco.
+      arrangement: one scene slab bleeding top, right and bottom; the horizon climbs left to right like the menu screen; bubbles sit on and above the line.
+      pattern: "formas de bolha" + "sombra dura para baixo e à direita" → pills and discs outlined in traco-ui, each over its own hard offset (sombra-painel 6px / sombra-m 4px) in cor-traco.
+      scales: stroke traco-ui 3px, offsets 6px and 4px, pill radius = half the short side (raio-pilula), disc raio-circulo; gaps espaco-24 / espaco-48.
+    -->
+    <rect class="ceu" x="480" y="0" width="480" height="300"/>
+    <polygon class="chao" points="480,236 960,176 960,300 480,300"/>
+    <line class="linha" x1="480" y1="236" x2="960" y2="176"/>
+    <line class="linha" x1="481.5" y1="0" x2="481.5" y2="300"/>
+
+    <rect class="sombra" x="566" y="160" width="208" height="72" rx="36" transform="rotate(-3 670 196)"/>
+    <rect class="vermelho contorno" x="560" y="154" width="208" height="72" rx="36" transform="rotate(-3 664 190)"/>
+
+    <circle class="sombra" cx="850" cy="94" r="48"/>
+    <circle class="magenta contorno" cx="846" cy="90" r="48"/>
+
+    <rect class="sombra" x="628" y="60" width="96" height="48" rx="24" transform="rotate(3 676 84)"/>
+    <rect class="branco contorno" x="624" y="56" width="96" height="48" rx="24" transform="rotate(3 672 80)"/>
+
+    <circle class="sombra" cx="560" cy="64" r="14"/>
+    <circle class="magenta contorno" cx="558" cy="62" r="14"/>
+  </svg>
+  <div class="text">
+    <h1>Grotesco<br>Surreal</h1>
+    <p>Humor exagerado com acabamento limpo.</p>
+  </div>
+</div>
+</body>
+</html>

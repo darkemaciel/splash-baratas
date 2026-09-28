@@ -1,6 +1,8 @@
+import "./src/styles/tokens.css";
 import Phaser from "phaser";
 import { inject } from "@vercel/analytics";
 import { GAME_HEIGHT, GAME_WIDTH } from "./src/config/gameConfig";
+import { COR, hex } from "./src/config/theme";
 import { BootScene } from "./src/scenes/BootScene";
 import { StartScene } from "./src/scenes/StartScene";
 import { GameScene } from "./src/scenes/GameScene";
@@ -16,7 +18,7 @@ new Phaser.Game({
   parent: "game",
   width: GAME_WIDTH,
   height: GAME_HEIGHT,
-  backgroundColor: "#0d0d0d",
+  backgroundColor: hex(COR.traco),
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,

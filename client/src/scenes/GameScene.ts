@@ -8,70 +8,39 @@ import {
   SHELF_Y_POSITIONS,
   type Point,
 } from "../config/gameConfig";
-import { elapsedMs, formatElapsedTime, shelfIndexFromId, type RiskLevel } from "../entities/Match";
+import { COR, ESPACO, MOVIMENTO, TAMANHO } from "../config/theme";
+import { elapsedMs, shelfIndexFromId } from "../entities/Match";
 import { positionAt, progress, type Roach } from "../entities/Roach";
 import type { FoodItem } from "../entities/FoodItem";
-import { ROACH_FLY_ANIM, ROACH_WALK_ANIM } from "./BootScene";
+import { ICONE, ROACH_FLY_ANIM, ROACH_WALK_ANIM } from "./BootScene";
+import { isOverAudioButton } from "./AudioControlScene";
 import { pickTopmostHit, type RoachHitTestInput } from "../systems/CollisionSystem";
 import { matchStateManager, type MatchSnapshot } from "../systems/MatchStateManager";
+import { formatClock, formatThousands } from "../ui/format";
+import { createIconButton, type IconButton } from "../ui/IconButton";
+import { createPill, type Pill } from "../ui/Pill";
+import { createRiskBar, type RiskBar } from "../ui/RiskBar";
 
-// specs/005-hud-vida-vertical (research.md §2) + ajuste manual (feedback do usuário, teste em
-// dispositivo, 2026-09-15): vida + barra no canto superior direito, o mais próximo possível das
-// bordas; barra sempre centralizada horizontalmente sob a vida (mesma fórmula de x). Margens bem
-// menores que antes de propósito — "bem no canto" — ainda sem sobrepor a prateleira superior
-// (borda direita em x=900 — GameScene: shelf de largura GAME_WIDTH-120 centralizado em
-// GAME_WIDTH/2), já que o HUD fica à direita da prateleira em qualquer margem razoável.
-const HUD_MARGIN_TOP = 8;
-const HUD_MARGIN_RIGHT = 12;
-const HUD_BAR_THICKNESS = 16;
-const HUD_BAR_LENGTH = 160;
-const HUD_LIFE_COUNTER_Y = HUD_MARGIN_TOP;
-const HUD_BAR_TOP_Y = HUD_LIFE_COUNTER_Y + 24;
-const HUD_BAR_TRACK_COLOR = 0x333333;
-const HUD_RISK_COLORS: Record<RiskLevel, number> = {
-  safe: 0x2ecc71,
-  elevated: 0xf1c40f,
-  critical: 0xe74c3c,
-};
-// specs/005-hud-vida-vertical (FR-006, FR-007, FR-008, data-model.md § "Constantes de
-// apresentação"): fonte cartunesca compartilhada por todo o HUD.
-const HUD_FONT_FAMILY = '"Fredoka", "Comic Sans MS", cursive, sans-serif';
-const HUD_FONT_SIZE_PX = 18;
-// Score à esquerda da vida, na mesma linha, com espaçamento fixo entre os dois textos. Âncora
-// origin(1, 0) (borda direita fixa) em vez de centralizado: conforme a pontuação ganha dígitos,
-// o texto cresce só para a esquerda, nunca "furando" a borda direita da tela nem invadindo a
-// vida/barra — a posição x é recalculada a cada atualização a partir da borda esquerda real do
-// texto de vida (this.hudText), não de um valor fixo.
-const HUD_SCORE_GAP = 12;
+// specs/017-design-system-grotesco (contracts/screens.md § HUD da partida): pílulas e botão de
+// ícone do design system numa faixa do topo — pontos à esquerda, tempo no centro, comidas + barra
+// de risco + Pausar à direita (Pausar no canto). Na base retrato, comidas + barra descem para uma
+// segunda linha. A faixa termina bem acima da faixa de clique da prateleira superior.
+const HUD_RISK_BAR_WIDTH = 160;
+// Profundidades (contracts/ui-kit.md § Profundidade): o HUD fica abaixo das baratas, para que uma
+// barata passando pela faixa do topo continue visível por cima das pílulas.
+const UI_DEPTH_HUD = 10;
+const ROACH_DEPTH = 20;
 
-// specs/008-juice-animacao-barata (contracts/roach-juice-effect.md § "Constantes do efeito"):
-// squash/stretch + tremor puramente visuais, escalados por `progress(roach, now)` — zero no
-// spawn, máximo ao alcançar o alvo. `TREMOR_MAX_OFFSET_PX` fica abaixo de `HITBOX_PADDING_PX`
-// (6px) de propósito, para nunca degradar a precisão real de clique (Princípio V).
-const SQUASH_STRETCH_MAX_DELTA = 0.18;
-const SQUASH_STRETCH_FREQUENCY_HZ = 4;
-const TREMOR_MAX_OFFSET_PX = 4;
-const TREMOR_BASE_FREQUENCY_HZ = 6;
-const TREMOR_MAX_FREQUENCY_HZ = 14;
-
-// specs/016-animacao-locomocao-barata (contracts/roach-locomotion.md § "Entrada única do cálculo
-// de ângulo"): oscilação de locomoção com amplitude CONSTANTE desde o spawn (ao contrário do
-// "juice" acima, que cresce com `progress`) — canal `angle`, isolado de `scale`/posição.
-const FLY_LOCOMOTION_TILT_MAX_DEG = 6;
-const FLY_LOCOMOTION_FREQUENCY_HZ = 6;
-const WALK_LOCOMOTION_TILT_MAX_DEG = 10;
-const WALK_LOCOMOTION_FREQUENCY_HZ = 2.2;
+// specs/008-juice-animacao-barata (squash/stretch + tremor escalados por `progress`) e
+// specs/016-animacao-locomocao-barata (balanço de amplitude constante desde o spawn): os valores
+// vêm de MOVIMENTO (config/theme.ts), fonte única desde specs/017 (FR-007) — mesmos números de
+// antes. O tremor máximo (4px) fica abaixo de HITBOX_PADDING_PX (6px), para nunca degradar a mira.
+const { agitacao: AGITACAO, barataAndando: ANDANDO, barataVoando: VOANDO } = MOVIMENTO;
 // Spritesheets desenhados em 2x (128px, corpo ~80px) — 0.5 deixa o corpo com ~40px, o mesmo
 // diâmetro da antiga bolinha (ROACH_VISUAL_RADIUS * 2).
 const ROACH_SPRITE_SCALE = 0.5;
 // Direção para onde a barata "olha" nos quadros de origem (direita, cabeça ~25° para cima).
 const ROACH_SPRITE_FORWARD_DEG = -25;
-
-// specs/009-pausar-partida (contracts/pause-lifecycle.md): botão de pausa no canto superior
-// esquerdo, espelhando a margem/altura já usadas pelo HUD de vida no canto superior direito —
-// mesma faixa vertical (acima de HUD_BAR_TOP_Y), fora da área das prateleiras.
-const HUD_MARGIN_LEFT = 12;
-const PAUSE_BUTTON_FONT_SIZE_PX = 16;
 
 /**
  * Única scene que lê `MatchStateManager.getSnapshot()`/chama `tick()` a cada frame e traduz o
@@ -83,13 +52,12 @@ export class GameScene extends Phaser.Scene {
   /** specs/016-animacao-locomocao-barata (data-model.md): sorteado uma vez por barata, nunca re-sorteado. */
   private roachLocomotionStyles = new Map<string, "andando" | "voando">();
   private unsubscribers: Array<() => void> = [];
-  private hudText!: Phaser.GameObjects.Text;
-  private hudBar!: Phaser.GameObjects.Graphics;
-  private hudRiskLevel: RiskLevel | null = null;
-  /** specs/004-sistema-pontuacao: texto de pontuação, junto ao HUD de progresso/risco. */
-  private scoreText!: Phaser.GameObjects.Text;
-  /** specs/007-tempo-de-sobrevivencia: texto do cronômetro, canto superior esquerdo. */
-  private timerText!: Phaser.GameObjects.Text;
+  /** specs/017: pílulas do HUD, barra de risco e botão de pausa (contracts/screens.md). */
+  private scorePill!: Pill;
+  private timerPill!: Pill;
+  private foodPill!: Pill;
+  private riskBar!: RiskBar;
+  private pauseButton!: IconButton;
   /** specs/007-tempo-de-sobrevivencia (research.md §7): último segundo inteiro renderizado — evita redesenhar o texto a cada frame quando o valor visível não muda. */
   private lastRenderedElapsedSeconds = 0;
   /** specs/003-feedback-sonoro-sfx: estado do loop ambiente de voo (data-model.md § "Som ambiente"). */
@@ -135,59 +103,7 @@ export class GameScene extends Phaser.Scene {
       this.createFoodSprite(foodItem);
     }
 
-    this.hudText = this.add
-      .text(GAME_WIDTH - HUD_MARGIN_RIGHT - HUD_BAR_THICKNESS / 2, HUD_LIFE_COUNTER_Y, "", {
-        fontSize: `${HUD_FONT_SIZE_PX}px`,
-        fontFamily: HUD_FONT_FAMILY,
-        color: "#000000",
-      })
-      .setOrigin(0.5, 0);
-    this.hudBar = this.add.graphics();
-    this.hudRiskLevel = null;
-    this.updateHud(snapshot);
-
-    this.scoreText = this.add
-      .text(0, HUD_LIFE_COUNTER_Y, "", {
-        fontSize: `${HUD_FONT_SIZE_PX}px`,
-        fontFamily: HUD_FONT_FAMILY,
-        color: "#000000",
-      })
-      .setOrigin(1, 0);
-    this.updateScore(snapshot);
-
-    // Centralizado no topo da tela, entre vida (direita) e pontuação (esquerda).
-    this.timerText = this.add
-      .text(GAME_WIDTH / 2, HUD_LIFE_COUNTER_Y, formatElapsedTime(elapsedMs(snapshot, this.logicalNow())), {
-        fontSize: `${HUD_FONT_SIZE_PX}px`,
-        fontFamily: HUD_FONT_FAMILY,
-        color: "#000000",
-      })
-      .setOrigin(0.5, 0);
-    this.lastRenderedElapsedSeconds = 0;
-
-    // specs/009-pausar-partida (data-model.md, contracts/pause-lifecycle.md): botão de texto,
-    // mesmo padrão visual/interativo já usado em StartScene/GameOverScene — nenhum asset novo
-    // (Princípio VI).
-    const pauseButton = this.add
-      .text(HUD_MARGIN_LEFT, HUD_MARGIN_TOP, "Pausar", {
-        fontSize: `${PAUSE_BUTTON_FONT_SIZE_PX}px`,
-        fontFamily: HUD_FONT_FAMILY,
-        color: "#ffffff",
-        backgroundColor: "#333333",
-        padding: { x: 10, y: 6 },
-      })
-      .setOrigin(0, 0)
-      .setInteractive({ useHandCursor: true });
-
-    pauseButton.on("pointerdown", (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
-      // specs/009-pausar-partida (research.md §3, contracts/pause-lifecycle.md § "Garantia de
-      // não-interferência no domínio"): stopPropagation impede que este mesmo clique também
-      // dispare handlePointerDown (que trataria como clique perdido, tocaria sfx-miss e quebraria
-      // o combo) — enquanto GameScene está pausada, o próprio Scene Manager do Phaser desativa o
-      // Input Plugin desta Scene, então nenhum pointerdown chega a handlePointerDown até retomar.
-      event.stopPropagation();
-      this.triggerPause();
-    });
+    this.layoutHud(snapshot);
 
     // specs/009-pausar-partida: atalho de teclado, conveniência extra além do botão (Princípio
     // III — o botão já satisfaz a interação essencial via Pointer Events, o teclado é aditivo).
@@ -204,6 +120,10 @@ export class GameScene extends Phaser.Scene {
         this.pausedAccumMs += performance.now() - this.pauseStartedAtWallClock;
         this.pauseStartedAtWallClock = null;
       }
+      // specs/017 (contracts/screens.md § HUD): sai do estado ativo e volta ao repouso — o
+      // pointerout se perde enquanto o input da Scene está desligado, então o hover não fica preso.
+      // Cobre tanto o botão CONTINUAR quanto a tecla P.
+      this.pauseButton.setAtivo(false).resetVisualState();
     });
 
     this.unsubscribers = [
@@ -250,6 +170,9 @@ export class GameScene extends Phaser.Scene {
 
   /** specs/009-pausar-partida (contracts/pause-lifecycle.md § "Gatilhos e transições"). */
   private triggerPause(): void {
+    // specs/017: o botão aparece no estado ativo enquanto a partida está pausada (FR-015). A Scene
+    // pausada continua sendo desenhada, só o update e o input param.
+    this.pauseButton.setAtivo(true);
     this.sound.pauseAll();
     this.scene.pause();
     this.scene.launch("PauseOverlayScene");
@@ -264,7 +187,8 @@ export class GameScene extends Phaser.Scene {
     const elapsed = elapsedMs(snapshot, this.logicalNow());
     const seconds = Math.floor(elapsed / 1000);
     if (seconds !== this.lastRenderedElapsedSeconds) {
-      this.timerText.setText(formatElapsedTime(elapsed));
+      this.timerPill.setText(formatClock(elapsed));
+      this.fitTimerPill();
       this.lastRenderedElapsedSeconds = seconds;
     }
   }
@@ -285,47 +209,99 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
-   * FR-001/FR-003 (HUD): número de comidas restantes sempre atualizado; a barra é redesenhada
-   * a cada roubo (não a cada frame — Princípio V) para refletir tanto a cor de risco quanto a
-   * largura proporcional a comidas restantes/total.
+   * specs/017-design-system-grotesco (contracts/screens.md § HUD da partida): cria as pílulas, a
+   * barra de risco e o botão Pausar. L = 20 (lateral), T = 16 (topo), G = 12 (entre itens),
+   * B = 52 (botão de ícone, altura da linha).
+   */
+  private layoutHud(snapshot: MatchSnapshot): void {
+    const L = ESPACO.hudLateral;
+    const T = ESPACO.e16;
+    const G = ESPACO.e12;
+    const B = TAMANHO.botaoIcone;
+    const isLandscape = GAME_WIDTH >= GAME_HEIGHT;
+    const row1Y = T + B / 2;
+    const row2Y = T + B + G + B / 2;
+
+    this.scorePill = createPill(this, L, row1Y, {
+      text: "PONTOS 0",
+      textColor: COR.vermelho,
+      fill: "branco",
+      origin: 0,
+    }).setDepth(UI_DEPTH_HUD);
+
+    this.timerPill = createPill(this, GAME_WIDTH / 2, row1Y, {
+      text: formatClock(elapsedMs(snapshot, this.logicalNow())),
+      textColor: COR.traco,
+      fill: "creme",
+      iconKey: ICONE.tempo,
+      origin: 0.5,
+    }).setDepth(UI_DEPTH_HUD);
+    this.lastRenderedElapsedSeconds = 0;
+
+    this.pauseButton = createIconButton(this, GAME_WIDTH - L - B / 2, row1Y, {
+      iconKey: ICONE.pausar,
+      a11yLabel: "Pausar",
+      trigger: "down",
+      onActivate: (event) => {
+        // specs/009-pausar-partida (research.md §3, contracts/pause-lifecycle.md § "Garantia de
+        // não-interferência no domínio"): stopPropagation impede que este mesmo clique também
+        // dispare handlePointerDown (que trataria como clique perdido, tocaria sfx-miss e quebraria
+        // o combo) — enquanto GameScene está pausada, o próprio Scene Manager do Phaser desativa o
+        // Input Plugin desta Scene, então nenhum pointerdown chega a handlePointerDown até retomar.
+        event?.stopPropagation();
+        this.triggerPause();
+      },
+    }).setDepth(UI_DEPTH_HUD);
+
+    // Comidas + barra: à esquerda de Pausar na paisagem; segunda linha, alinhadas à direita, no retrato.
+    const groupRight = isLandscape ? GAME_WIDTH - L - B - G : GAME_WIDTH - L;
+    const groupY = isLandscape ? row1Y : row2Y;
+    this.riskBar = createRiskBar(this, groupRight, groupY, { width: HUD_RISK_BAR_WIDTH, origin: 1 }).setDepth(
+      UI_DEPTH_HUD,
+    );
+    this.foodPill = createPill(this, groupRight - HUD_RISK_BAR_WIDTH - G, groupY, {
+      text: "0 / 0",
+      textColor: COR.traco,
+      fill: "branco",
+      iconKey: ICONE.coracao,
+      origin: 1,
+    }).setDepth(UI_DEPTH_HUD);
+
+    this.updateHud(snapshot);
+    this.updateScore(snapshot);
+  }
+
+  /**
+   * contracts/screens.md § Invariante de largura: o tempo fica no centro da tela, mas nunca encosta
+   * na pílula de pontos (esquerda) nem no próximo item à direita na mesma linha (comidas na
+   * paisagem, Pausar no retrato) — desliza o necessário para caber, sem sobrepor.
+   */
+  private fitTimerPill(): void {
+    const G = ESPACO.e12;
+    const isLandscape = GAME_WIDTH >= GAME_HEIGHT;
+    const half = this.timerPill.width / 2;
+    const minX = ESPACO.hudLateral + this.scorePill.width + G + half;
+    const rightNeighborLeft = isLandscape
+      ? this.foodPill.root.x - this.foodPill.width / 2
+      : GAME_WIDTH - ESPACO.hudLateral - TAMANHO.botaoIcone;
+    const maxX = rightNeighborLeft - G - half;
+    this.timerPill.setAnchorX(Math.min(Math.max(GAME_WIDTH / 2, minX), maxX));
+  }
+
+  /**
+   * FR-001/FR-003 (HUD) + specs/017 (FR-013/FR-014): comidas restantes "N / total" e barra de risco
+   * horizontal — redesenhadas a cada roubo, não a cada frame (Princípio V).
    */
   private updateHud(snapshot: MatchSnapshot): void {
-    this.hudText.setText(`${snapshot.foodRemainingCount} / ${snapshot.foodTotalCount}`);
-    this.hudRiskLevel = snapshot.riskLevel;
-    this.redrawHudBar(snapshot);
+    this.foodPill.setText(`${snapshot.foodRemainingCount} / ${snapshot.foodTotalCount}`);
+    const ratio = snapshot.foodTotalCount === 0 ? 0 : snapshot.foodRemainingCount / snapshot.foodTotalCount;
+    this.riskBar.update(ratio, snapshot.riskLevel);
   }
 
-  /**
-   * specs/004-sistema-pontuacao (FR-009): pontuação atualizada por evento, não por frame.
-   * A posição x é recalculada a cada troca de texto: com origin(1, 0), o texto cresce para a
-   * esquerda a partir de uma borda direita fixa (borda esquerda real de `hudText`, menos
-   * HUD_SCORE_GAP) — impede que a pontuação "fure" a borda da tela ao ganhar dígitos.
-   */
+  /** specs/004-sistema-pontuacao (FR-009): pontuação atualizada por evento, não por frame. */
   private updateScore(snapshot: MatchSnapshot): void {
-    this.scoreText.setText(`SCORE: ${snapshot.score}`);
-    this.scoreText.setX(this.hudText.x - this.hudText.width / 2 - HUD_SCORE_GAP);
-  }
-
-  /**
-   * specs/005-hud-vida-vertical (FR-002, research.md §1): barra vertical, preenchimento
-   * contínuo da base para o topo — altura proporcional a comidas restantes; cor por nível de
-   * risco (mesmo esquema de FR-002/FR-005 do spec 002-hud-progresso-risco).
-   */
-  private redrawHudBar(snapshot: MatchSnapshot): void {
-    const x = GAME_WIDTH - HUD_MARGIN_RIGHT - HUD_BAR_THICKNESS;
-    const ratio =
-      snapshot.foodTotalCount === 0 ? 0 : snapshot.foodRemainingCount / snapshot.foodTotalCount;
-    const filledHeight = HUD_BAR_LENGTH * ratio;
-    this.hudBar.clear();
-    this.hudBar.fillStyle(HUD_BAR_TRACK_COLOR, 1);
-    this.hudBar.fillRect(x, HUD_BAR_TOP_Y, HUD_BAR_THICKNESS, HUD_BAR_LENGTH);
-    this.hudBar.fillStyle(HUD_RISK_COLORS[snapshot.riskLevel], 1);
-    this.hudBar.fillRect(
-      x,
-      HUD_BAR_TOP_Y + (HUD_BAR_LENGTH - filledHeight),
-      HUD_BAR_THICKNESS,
-      filledHeight,
-    );
+    this.scorePill.setText(`PONTOS ${formatThousands(snapshot.score)}`);
+    this.fitTimerPill();
   }
 
   private createFoodSprite(foodItem: FoodItem): void {
@@ -362,9 +338,9 @@ export class GameScene extends Phaser.Scene {
    */
   private computeRoachSquashStretch(roach: Roach, now: number): { scaleX: number; scaleY: number } {
     const wobble = Math.sin(
-      (now / 1000) * SQUASH_STRETCH_FREQUENCY_HZ * 2 * Math.PI + this.roachPhase(roach.id),
+      (now / 1000) * AGITACAO.squashHz * 2 * Math.PI + this.roachPhase(roach.id),
     );
-    const delta = SQUASH_STRETCH_MAX_DELTA * progress(roach, now) * wobble;
+    const delta = AGITACAO.squashMax * progress(roach, now) * wobble;
     return { scaleX: 1 + delta, scaleY: 1 - delta };
   }
 
@@ -376,8 +352,8 @@ export class GameScene extends Phaser.Scene {
   private computeRoachTremorOffset(roach: Roach, now: number): { dx: number; dy: number } {
     const roachProgress = progress(roach, now);
     const frequency =
-      TREMOR_BASE_FREQUENCY_HZ + roachProgress * (TREMOR_MAX_FREQUENCY_HZ - TREMOR_BASE_FREQUENCY_HZ);
-    const amplitude = TREMOR_MAX_OFFSET_PX * roachProgress;
+      AGITACAO.tremorHzMin + roachProgress * (AGITACAO.tremorHzMax - AGITACAO.tremorHzMin);
+    const amplitude = AGITACAO.tremorMaxPx * roachProgress;
     const phase = this.roachPhase(roach.id);
     const dx = amplitude * Math.sin((now / 1000) * frequency * 2 * Math.PI + phase);
     const dy = amplitude * Math.cos((now / 1000) * frequency * 1.3 * 2 * Math.PI + phase);
@@ -395,9 +371,9 @@ export class GameScene extends Phaser.Scene {
     now: number,
     estilo: "andando" | "voando",
   ): number {
-    const maxDeg = estilo === "andando" ? WALK_LOCOMOTION_TILT_MAX_DEG : FLY_LOCOMOTION_TILT_MAX_DEG;
+    const maxDeg = estilo === "andando" ? ANDANDO.balancoDeg : VOANDO.balancoDeg;
     const frequency =
-      estilo === "andando" ? WALK_LOCOMOTION_FREQUENCY_HZ : FLY_LOCOMOTION_FREQUENCY_HZ;
+      estilo === "andando" ? ANDANDO.balancoHz : VOANDO.balancoHz;
     const phase = this.roachPhase(roach.id);
     return maxDeg * Math.sin((now / 1000) * frequency * 2 * Math.PI + phase);
   }
@@ -443,7 +419,7 @@ export class GameScene extends Phaser.Scene {
         // sprite — nunca re-sorteado depois.
         const estiloSorteado = Math.random() < 0.5 ? "andando" : "voando";
         const animKey = estiloSorteado === "andando" ? ROACH_WALK_ANIM : ROACH_FLY_ANIM;
-        sprite = this.add.sprite(position.x + tremor.dx, position.y + tremor.dy, animKey);
+        sprite = this.add.sprite(position.x + tremor.dx, position.y + tremor.dy, animKey).setDepth(ROACH_DEPTH);
         // Quadro inicial aleatório para que baratas simultâneas não se movam em sincronia.
         const frameCount = this.anims.get(animKey)?.getTotalFrames() ?? 1;
         sprite.play({ key: animKey, startFrame: Phaser.Math.Between(0, frameCount - 1) });
@@ -460,6 +436,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handlePointerDown(pointer: Phaser.Input.Pointer): void {
+    // specs/017 (contracts/screens.md § Clique não vaza para a partida, FR-019): o botão de som vive
+    // em outra Scene — um clique nele nunca conta como clique perdido nem dispara o golpe da pata.
+    if (isOverAudioButton(pointer.x, pointer.y)) {
+      return;
+    }
     const now = this.logicalNow();
     const snapshot = matchStateManager.getSnapshot();
     const candidates: RoachHitTestInput[] = [];
@@ -505,9 +486,9 @@ export class GameScene extends Phaser.Scene {
     this.roachSprites.delete(roachId);
     this.tweens.add({
       targets: sprite,
-      y: sprite.y + 40,
+      y: sprite.y + MOVIMENTO.barataEliminada.quedaPx,
       alpha: 0,
-      duration: 200,
+      duration: MOVIMENTO.barataEliminada.ms,
       onComplete: () => sprite.destroy(),
     });
   }
