@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import {
+  CURSOR_PAW_HEIGHT_PX,
   foodItemPosition,
   GAME_HEIGHT,
   GAME_WIDTH,
@@ -16,6 +17,8 @@ import { ICONE, ROACH_FLY_ANIM, ROACH_WALK_ANIM } from "./BootScene";
 import { isOverAudioButton } from "./AudioControlScene";
 import { pickTopmostHit, type RoachHitTestInput } from "../systems/CollisionSystem";
 import { matchStateManager, type MatchSnapshot } from "../systems/MatchStateManager";
+import { createFloatingScore, type PawGeometry } from "../ui/FloatingScore";
+import { rotatedBounds } from "../ui/floatingScoreLayout";
 import { formatClock, formatThousands } from "../ui/format";
 import { createIconButton, type IconButton } from "../ui/IconButton";
 import { createPill, type Pill } from "../ui/Pill";
@@ -58,6 +61,14 @@ export class GameScene extends Phaser.Scene {
   private foodPill!: Pill;
   private riskBar!: RiskBar;
   private pauseButton!: IconButton;
+  /**
+   * specs/019-pontuacao-flutuante (research §2): ponto do clique que está sendo processado — gravado
+   * em handlePointerDown logo antes de tryEliminateRoach; como `emit` é síncrono, o handler de
+   * "roach:eliminated" lê este ponto na mesma chamada para posicionar o "+N!" acima da pata.
+   */
+  private lastHitPoint = { x: 0, y: 0 };
+  /** specs/019: meia-caixa da pata durante o tapa (escala + giro), calculada uma vez em create(). */
+  private pawGeometry: PawGeometry = { halfWidth: 0, halfHeight: 0 };
   /** specs/007-tempo-de-sobrevivencia (research.md §7): último segundo inteiro renderizado — evita redesenhar o texto a cada frame quando o valor visível não muda. */
   private lastRenderedElapsedSeconds = 0;
   /** specs/003-feedback-sonoro-sfx: estado do loop ambiente de voo (data-model.md § "Som ambiente"). */
@@ -104,6 +115,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.layoutHud(snapshot);
+    this.pawGeometry = this.computePawGeometry();
 
     // specs/009-pausar-partida: atalho de teclado, conveniência extra além do botão (Princípio
     // III — o botão já satisfaz a interação essencial via Pointer Events, o teclado é aditivo).
@@ -127,7 +139,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.unsubscribers = [
-      matchStateManager.on("roach:eliminated", ({ roachId }) => this.playRoachEliminated(roachId)),
+      matchStateManager.on("roach:eliminated", ({ roachId, points }) => this.playRoachEliminated(roachId, points)),
       matchStateManager.on("roach:eliminated", () => this.updateScore(matchStateManager.getSnapshot())),
       matchStateManager.on("food:stolen", ({ foodItemId }) => this.playFoodStolen(foodItemId)),
       matchStateManager.on("food:stolen", () => this.updateHud(matchStateManager.getSnapshot())),
@@ -470,6 +482,7 @@ export class GameScene extends Phaser.Scene {
 
     const hit = pickTopmostHit({ x: pointer.x, y: pointer.y }, candidates, HITBOX_PADDING_PX);
     if (hit) {
+      this.lastHitPoint = { x: pointer.x, y: pointer.y };
       matchStateManager.tryEliminateRoach(hit.id, now);
     } else {
       matchStateManager.registerMissedClick(); // specs/004-sistema-pontuacao (FR-008b)
@@ -483,9 +496,30 @@ export class GameScene extends Phaser.Scene {
     this.game.events.emit("cursor:strike");
   }
 
-  /** FR-020: feedback visual breve de queda ao eliminar uma barata; specs/003: + som de acerto. */
-  private playRoachEliminated(roachId: string): void {
+  /**
+   * specs/019-pontuacao-flutuante (research §2): a pata é desenhada centrada no ponteiro
+   * (CursorScene), com a altura do design system; durante o tapa ela cresce e gira. A caixa
+   * envolvente nesse instante é a maior área que ela ocupa — o "+N!" nunca encosta nela. Sem a
+   * textura (cursor nativo), usa proporção 1.
+   */
+  private computePawGeometry(): PawGeometry {
+    const pawHeight = CURSOR_PAW_HEIGHT_PX * MOVIMENTO.pata.golpeEscala;
+    let aspect = 1;
+    if (this.textures.exists("cursor-paw")) {
+      const source = this.textures.get("cursor-paw").getSourceImage();
+      aspect = source.width / source.height;
+    }
+    const bounds = rotatedBounds(pawHeight * aspect, pawHeight, MOVIMENTO.pata.golpeAnguloDeg);
+    return { halfWidth: bounds.width / 2, halfHeight: bounds.height / 2 };
+  }
+
+  /**
+   * FR-020: feedback visual breve de queda ao eliminar uma barata; specs/003: + som de acerto;
+   * specs/019: "+N!" acima da pata, no ponto do clique (mesmo se o sprite já tiver sido removido).
+   */
+  private playRoachEliminated(roachId: string, points: number): void {
     this.sound.play("sfx-hit");
+    createFloatingScore(this, this.lastHitPoint.x, this.lastHitPoint.y, points, this.pawGeometry);
     const sprite = this.roachSprites.get(roachId);
     if (!sprite) {
       return;

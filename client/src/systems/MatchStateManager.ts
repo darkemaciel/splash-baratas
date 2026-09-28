@@ -61,7 +61,8 @@ export type MatchEventName =
 export interface MatchEventPayloads {
   "match:started": MatchSnapshot;
   "roach:spawned": Roach;
-  "roach:eliminated": { roachId: string };
+  /** specs/019-pontuacao-flutuante (research §1): `points` = pontos somados por esta eliminação. */
+  "roach:eliminated": { roachId: string; points: number };
   "food:stolen": { foodItemId: string };
   "match:lost": MatchSnapshot;
 }
@@ -212,9 +213,11 @@ export class MatchStateManager {
     }
     const eliminated = eliminate(roach);
     if (eliminated) {
-      applyEliminationScore(this.match, clientTimestamp, roach.spawnedAt);
+      const points = applyEliminationScore(this.match, clientTimestamp, roach.spawnedAt);
       removeRoach(this.match, roachId);
-      this.emit("roach:eliminated", { roachId });
+      // specs/019-pontuacao-flutuante (FR-001/FR-013): publica os pontos que já eram calculados, para
+      // a pontuação flutuante "+N!" — nenhuma regra de pontuação muda.
+      this.emit("roach:eliminated", { roachId, points });
     }
     return eliminated;
   }
