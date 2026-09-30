@@ -1,91 +1,127 @@
 import Phaser from "phaser";
-import { GAME_HEIGHT, GAME_WIDTH, HIGH_SCORE_RANKING_MAX_ENTRIES, UI_SCALE } from "../config/gameConfig";
+import { GAME_HEIGHT, GAME_WIDTH, HIGH_SCORE_RANKING_MAX_ENTRIES } from "../config/gameConfig";
+import { ALFA, COR, ESPACO, TAMANHO, TEXTO } from "../config/theme";
 import { recordScore, type RankingEntry } from "../systems/HighScoreStore";
 import { matchStateManager } from "../systems/MatchStateManager";
+import { setProxiesEnabled } from "../ui/a11y";
+import { createButton } from "../ui/Button";
+import { bodyText } from "../ui/draw";
+import { formatThousands } from "../ui/format";
+import { createOutlinedTitle } from "../ui/OutlinedTitle";
+import { createPanel, createPanelTitle } from "../ui/Panel";
+import { createPill, type Pill } from "../ui/Pill";
+import { createResultCard, type ResultRow } from "../ui/ResultCard";
 
 const NAME_MAX_LENGTH = 10;
 const NAME_ALLOWED_CHAR = /^[a-zA-Z0-9 ]$/;
 
+// specs/017-design-system-grotesco (contracts/screens.md § Fim de jogo).
+const TITLE_Y_FRACTION = 0.11;
+const TITLE_ANGLE = -3;
+const NAME_PANEL_MAX_WIDTH = 440;
+/** Campo de nome com largura fixa para até NAME_MAX_LENGTH letras, sem crescer a cada tecla. */
+const NAME_FIELD_MIN_WIDTH = 240;
+const PANEL_PAD_TOP = 26;
+const PANEL_PAD_BOTTOM = 30;
+const CONTENT_DEPTH = 1;
+/** Folga mínima entre o fim do conteúdo e a borda inferior da tela. */
+const BOTTOM_MARGIN = ESPACO.e16;
+
 /**
- * FR-011/FR-012: tela final de derrota com opção de reiniciar sem recarregar a página.
+ * FR-011/FR-012 (spec 001): tela final de derrota com opção de reiniciar sem recarregar a página.
  */
 export class GameOverScene extends Phaser.Scene {
   private typedName = "";
-  private nameDisplay!: Phaser.GameObjects.Text;
+  private nameField!: Pill;
   private cursorVisible = true;
   private cursorTimer?: Phaser.Time.TimerEvent;
+  private contentTop = 0;
+  /** specs/018 (FR-014): trava de saída — DE NOVO! e MENU são mutuamente exclusivos. */
+  private leaving = false;
 
   constructor() {
     super("GameOverScene");
   }
 
   create(): void {
-    this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x1b1b1b, 0.85);
+    this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, "fridgeBg");
+    this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, COR.traco, ALFA.sobreposicao);
 
-    // specs/004-sistema-pontuacao (FR-010): pontuação final — único texto central pedido pelo dono
-    // do produto (a mensagem de derrota e o tempo de sobrevivência foram removidos desta tela).
+    const title = createOutlinedTitle(this, GAME_WIDTH / 2, GAME_HEIGHT * TITLE_Y_FRACTION, "FIM DE JOGO!", {
+      size: TEXTO.titulo_g.size,
+      angle: TITLE_ANGLE,
+      wrapWidth: GAME_WIDTH - 2 * ESPACO.hudLateral,
+    });
+    this.contentTop = title.y + title.height / 2;
+
+    // specs/004-sistema-pontuacao (FR-010): pontuação final.
     const { score } = matchStateManager.getSnapshot();
     this.typedName = "";
+    this.leaving = false;
     this.showNameEntry(score);
   }
 
   /**
-   * specs/012-high-score-local (revisão): captura o nome do jogador dentro do próprio jogo — um
-   * painel no estilo "insira suas iniciais" de arcade/fliper antigo, digitado via teclado direto no
-   * canvas, em vez do `window.prompt()` nativo do navegador usado antes (destoava visualmente do
-   * resto do jogo).
+   * specs/012-high-score-local (revisão): captura o nome do jogador dentro do próprio jogo, digitado
+   * via teclado direto no canvas. specs/017: painel/diálogo do design system; as regras de teclado
+   * não mudam (FR-012).
    */
   private showNameEntry(score: number): void {
-    const panelWidth = Math.round(440 * UI_SCALE);
-    const panelHeight = Math.round(200 * UI_SCALE);
-    const panelX = GAME_WIDTH / 2;
-    const panelY = GAME_HEIGHT / 2;
+    // contracts/ui-kit.md § Proxies e digitação: Espaço/Enter digitados aqui nunca acionam um botão
+    // DOM focado (ex.: o proxy do botão de som).
+    setProxiesEnabled(false);
 
-    const panel = this.add
-      .rectangle(panelX, panelY, panelWidth, panelHeight, 0x0d0d0d, 0.95)
-      .setStrokeStyle(3, 0xffd166);
+    const panelWidth = Math.min(NAME_PANEL_MAX_WIDTH, GAME_WIDTH - 2 * ESPACO.hudLateral);
+    const centerX = GAME_WIDTH / 2;
 
-    const title = this.add
-      .text(panelX, panelY - panelHeight / 2 + 28, "NOVA PONTUAÇÃO!", {
-        fontFamily: "monospace",
-        fontSize: `${Math.round(18 * UI_SCALE)}px`,
-        color: "#ffd166",
-        fontStyle: "bold",
-      })
-      .setOrigin(0.5);
+    const heading = createPanelTitle(this, centerX, 0, "NOVA PONTUAÇÃO!", TEXTO.titulo_p.size);
+    const scorePill = createPill(this, centerX, 0, {
+      text: `PONTOS ${formatThousands(score)}`,
+      textColor: COR.vermelho,
+      fill: "branco",
+      origin: 0.5,
+    });
+    this.nameField = createPill(this, centerX, 0, {
+      text: this.renderNameLine(),
+      textColor: COR.traco,
+      fill: "branco",
+      origin: 0.5,
+      minWidth: NAME_FIELD_MIN_WIDTH,
+    });
+    const instruction = bodyText(
+      this,
+      centerX,
+      0,
+      "Digite seu nome e aperte Enter",
+      TEXTO.corpo.size,
+      TEXTO.corpo.weight,
+      COR.legenda,
+    );
 
-    const scoreLine = this.add
-      .text(panelX, panelY - panelHeight / 2 + 58, `Pontuação: ${score}`, {
-        fontFamily: "monospace",
-        fontSize: `${Math.round(16 * UI_SCALE)}px`,
-        color: "#ffffff",
-      })
-      .setOrigin(0.5);
+    const gap = ESPACO.e12;
+    const blocks = [heading.height - 8, scorePill.height, this.nameField.height, instruction.height - 8];
+    const panelHeight = PANEL_PAD_TOP + blocks.reduce((a, b) => a + b, 0) + gap * (blocks.length - 1) + PANEL_PAD_BOTTOM;
+    const available = GAME_HEIGHT - this.contentTop;
+    const panelCenterY = this.contentTop + available / 2;
+    const panel = createPanel(this, centerX, panelCenterY, { width: panelWidth, height: panelHeight });
 
-    const instruction = this.add
-      .text(panelX, panelY + panelHeight / 2 - 22, "Digite seu nome e pressione ENTER", {
-        fontFamily: "monospace",
-        fontSize: `${Math.round(13 * UI_SCALE)}px`,
-        color: "#a0a0a0",
-      })
-      .setOrigin(0.5);
-
-    this.nameDisplay = this.add
-      .text(panelX, panelY + 8, this.renderNameLine(), {
-        fontFamily: "monospace",
-        fontSize: `${Math.round(24 * UI_SCALE)}px`,
-        color: "#ffffff",
-        backgroundColor: "#1b1b1b",
-        padding: { x: 16, y: 8 },
-      })
-      .setOrigin(0.5);
+    let cursorY = panelCenterY - panelHeight / 2 + PANEL_PAD_TOP;
+    const place = (index: number, setY: (y: number) => void): void => {
+      const blockHeight = blocks[index]!;
+      setY(cursorY + blockHeight / 2);
+      cursorY += blockHeight + gap;
+    };
+    place(0, (y) => heading.setY(y));
+    place(1, (y) => scorePill.root.setY(y));
+    place(2, (y) => this.nameField.root.setY(y));
+    place(3, (y) => instruction.setY(y));
 
     const elements: Phaser.GameObjects.GameObject[] = [
       panel,
-      title,
-      scoreLine,
-      instruction,
-      this.nameDisplay,
+      heading.setDepth(CONTENT_DEPTH),
+      scorePill.root.setDepth(CONTENT_DEPTH),
+      this.nameField.root.setDepth(CONTENT_DEPTH),
+      instruction.setDepth(CONTENT_DEPTH),
     ];
 
     this.cursorTimer = this.time.addEvent({
@@ -93,7 +129,7 @@ export class GameOverScene extends Phaser.Scene {
       loop: true,
       callback: () => {
         this.cursorVisible = !this.cursorVisible;
-        this.nameDisplay.setText(this.renderNameLine());
+        this.nameField.setText(this.renderNameLine());
       },
     });
 
@@ -106,12 +142,12 @@ export class GameOverScene extends Phaser.Scene {
       }
       if (event.key === "Backspace") {
         this.typedName = this.typedName.slice(0, -1);
-        this.nameDisplay.setText(this.renderNameLine());
+        this.nameField.setText(this.renderNameLine());
         return;
       }
       if (NAME_ALLOWED_CHAR.test(event.key) && this.typedName.length < NAME_MAX_LENGTH) {
         this.typedName += event.key;
-        this.nameDisplay.setText(this.renderNameLine());
+        this.nameField.setText(this.renderNameLine());
       }
     };
 
@@ -119,114 +155,129 @@ export class GameOverScene extends Phaser.Scene {
       this.input.keyboard?.off("keydown", handleKeydown);
       this.cursorTimer?.remove();
       elements.forEach((element) => element.destroy());
+      setProxiesEnabled(true);
     };
 
     this.input.keyboard?.on("keydown", handleKeydown);
+    // Sair da cena no meio da digitação (ex.: reinício externo) não pode deixar os proxies desligados.
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => setProxiesEnabled(true));
   }
 
   private renderNameLine(): string {
-    return `${this.typedName}${this.cursorVisible ? "_" : " "}`;
+    // Espaço de largura fixa no lugar do "_" apagado, para a pílula não "pular" a cada piscada.
+    return `${this.typedName}${this.cursorVisible ? "_" : " "}`;
   }
 
+  /**
+   * specs/017-design-system-grotesco (contracts/screens.md § Fim de jogo, item 2): pontuação final em
+   * pílula vermelha, mensagem de posição em pílula logo abaixo, cartão de resultado com o Top 5 e o
+   * botão primário "DE NOVO!". Tudo cabe em 600px de altura; se não couber, as linhas do ranking
+   * ficam mais baixas (padding 4, depois 2).
+   */
   private showResults(score: number, name: string): void {
     const { position, ranking } = recordScore(name, score);
+    const centerX = GAME_WIDTH / 2;
+    const gap = ESPACO.e16;
 
-    let cursorY = GAME_HEIGHT / 2 - Math.round(150 * UI_SCALE);
+    let cursorY = this.contentTop + gap;
 
-    const scoreText = this.add
-      .text(GAME_WIDTH / 2, cursorY, `${score}`, {
-        fontSize: `${Math.round(56 * UI_SCALE)}px`,
-        color: "#ffffff",
-        fontStyle: "bold",
-      })
-      .setOrigin(0.5, 0);
-    cursorY += scoreText.height + Math.round(16 * UI_SCALE);
+    const scorePill = createPill(this, centerX, 0, {
+      text: `PONTOS ${formatThousands(score)}`,
+      textColor: COR.vermelho,
+      fill: "branco",
+      origin: 0.5,
+    });
+    scorePill.root.setY(cursorY + scorePill.height / 2);
+    cursorY += scorePill.height + ESPACO.e12;
 
     if (position !== null) {
-      const rankingText = position === 1 ? "Novo recorde!" : `Top 5 — ${position}º lugar!`;
-      const rankingMessage = this.add
-        .text(GAME_WIDTH / 2, cursorY, rankingText, {
-          fontSize: `${Math.round(20 * UI_SCALE)}px`,
-          color: "#ffd166",
-          fontStyle: "bold",
-        })
-        .setOrigin(0.5, 0);
-      cursorY += rankingMessage.height + Math.round(24 * UI_SCALE);
-    } else {
-      cursorY += Math.round(24 * UI_SCALE);
+      const message = position === 1 ? "NOVO RECORDE!" : `${position}º LUGAR NO TOP 5!`;
+      const messagePill = createPill(this, centerX, 0, {
+        text: message,
+        textColor: COR.traco,
+        fill: "creme",
+        origin: 0.5,
+      });
+      messagePill.root.setY(cursorY + messagePill.height / 2);
+      cursorY += messagePill.height + ESPACO.e12;
     }
-
-    cursorY = this.renderRankingCard(ranking, cursorY) + Math.round(30 * UI_SCALE);
-
-    const button = this.add
-      .text(GAME_WIDTH / 2, cursorY, "Reiniciar", {
-        fontSize: `${Math.round(28 * UI_SCALE)}px`,
-        color: "#ffffff",
-        backgroundColor: "#e76f51",
-        padding: { x: Math.round(24 * UI_SCALE), y: Math.round(12 * UI_SCALE) },
-      })
-      .setOrigin(0.5, 0)
-      .setInteractive({ useHandCursor: true });
 
     const unsubscribe = matchStateManager.on("match:started", () => {
       unsubscribe();
       this.scene.start("GameScene");
     });
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, unsubscribe);
 
-    button.on("pointerdown", () => {
-      matchStateManager.restart(this.time.now);
+    // specs/018-navegacao-pausa-fim (FR-008 a FR-010, FR-014): DE NOVO! + MENU. Criados antes do
+    // cartão para medir a altura da linha de ações; posicionados no fim com setPosition.
+    const playAgain = createButton(this, centerX, 0, {
+      label: "DE NOVO!",
+      variant: "primario",
+      size: "m",
+      bolha: "a",
+      a11yLabel: "De novo!",
+      onActivate: () => this.leave(() => matchStateManager.restart(this.time.now)),
     });
+    const menu = createButton(this, centerX, 0, {
+      label: "MENU",
+      variant: "secundario",
+      size: "m",
+      bolha: "b",
+      a11yLabel: "Menu",
+      onActivate: () => this.leave(() => this.scene.start("StartScene")),
+    });
+    // Lado a lado se couberem na largura útil (sempre, na paisagem); senão, empilhados com DE NOVO!
+    // em cima — só acontece no retrato, que tem altura de sobra.
+    const rowWidth = playAgain.width + ESPACO.e16 + menu.width;
+    const sideBySide = rowWidth <= GAME_WIDTH - 2 * ESPACO.hudLateral;
+    const actionsHeight = sideBySide
+      ? Math.max(playAgain.height, menu.height)
+      : playAgain.height + ESPACO.e12 + menu.height;
+
+    const cardWidth = Math.min(TAMANHO.cartaoResultado, GAME_WIDTH - 2 * ESPACO.hudLateral);
+    const rows = this.rankingRows(ranking);
+    let card = createResultCard(this, centerX, 0, { width: cardWidth, rows, title: "TOP 5" });
+    for (const rowPaddingY of [4, 2]) {
+      const bottom = cursorY + card.height + gap + actionsHeight;
+      if (bottom <= GAME_HEIGHT - BOTTOM_MARGIN) {
+        break;
+      }
+      card.root.destroy();
+      card = createResultCard(this, centerX, 0, { width: cardWidth, rows, title: "TOP 5", rowPaddingY });
+    }
+    card.root.setY(cursorY + card.height / 2);
+    cursorY += card.height + gap;
+
+    if (sideBySide) {
+      const rowCenterY = cursorY + actionsHeight / 2;
+      playAgain.setPosition(centerX - rowWidth / 2 + playAgain.width / 2, rowCenterY);
+      menu.setPosition(centerX + rowWidth / 2 - menu.width / 2, rowCenterY);
+    } else {
+      playAgain.setPosition(centerX, cursorY + playAgain.height / 2);
+      menu.setPosition(centerX, cursorY + playAgain.height + ESPACO.e12 + menu.height / 2);
+    }
   }
 
-  /**
-   * specs/012-high-score-local (revisão): card de ranking no estilo das telas de "high scores" de
-   * fliper/arcade — fundo escuro, borda dourada, fonte monoespaçada, sempre com
-   * `HIGH_SCORE_RANKING_MAX_ENTRIES` linhas (slots vazios exibem "---"). Centralizado na tela como
-   * um bloco (não mais colado à direita) — as linhas dentro do bloco são alinhadas à esquerda entre
-   * si (um único `Text` multi-linha com `align: "left"`) em vez de cada uma centralizada
-   * individualmente, o que ficava com uma aparência desalinhada por causa dos nomes/pontuações de
-   * tamanhos diferentes. Recebe o topo disponível (`topY`) e devolve o Y logo abaixo do card, para
-   * o chamador posicionar o próximo elemento.
-   */
-  private renderRankingCard(ranking: readonly RankingEntry[], topY: number): number {
-    const paddingX = Math.round(20 * UI_SCALE);
-    const paddingY = Math.round(14 * UI_SCALE);
-    const titleGap = Math.round(10 * UI_SCALE);
+  /** FR-014: só a primeira ação de saída (DE NOVO! ou MENU) vale; as seguintes são ignoradas. */
+  private leave(action: () => void): void {
+    if (this.leaving) {
+      return;
+    }
+    this.leaving = true;
+    action();
+  }
 
-    const lines: string[] = [];
+  /** Sempre `HIGH_SCORE_RANKING_MAX_ENTRIES` linhas; slots vazios mostram "---" sem valor. */
+  private rankingRows(ranking: readonly RankingEntry[]): ResultRow[] {
+    const rows: ResultRow[] = [];
     for (let i = 0; i < HIGH_SCORE_RANKING_MAX_ENTRIES; i++) {
       const entry = ranking[i];
-      lines.push(entry ? `${i + 1}. ${entry.name.toUpperCase()} — ${entry.score}` : `${i + 1}. ---`);
+      rows.push(
+        entry
+          ? { label: `${i + 1}. ${entry.name.toUpperCase()}`, value: formatThousands(entry.score) }
+          : { label: `${i + 1}. ---` },
+      );
     }
-
-    const title = this.add
-      .text(GAME_WIDTH / 2, topY + paddingY, "TOP 5 SCORES", {
-        fontFamily: "monospace",
-        fontSize: `${Math.round(15 * UI_SCALE)}px`,
-        color: "#ffd166",
-        fontStyle: "bold",
-      })
-      .setOrigin(0.5, 0);
-
-    const body = this.add
-      .text(GAME_WIDTH / 2, topY + paddingY + title.height + titleGap, lines.join("\n"), {
-        fontFamily: "monospace",
-        fontSize: `${Math.round(13 * UI_SCALE)}px`,
-        color: "#ffffff",
-        align: "left",
-        lineSpacing: Math.round(8 * UI_SCALE),
-      })
-      .setOrigin(0.5, 0);
-
-    const cardWidth = Math.max(title.width, body.width) + paddingX * 2;
-    const cardHeight = paddingY * 2 + title.height + titleGap + body.height;
-    const cardCenterY = topY + cardHeight / 2;
-
-    this.add
-      .rectangle(GAME_WIDTH / 2, cardCenterY, cardWidth, cardHeight, 0x0d0d0d, 0.9)
-      .setStrokeStyle(3, 0xffd166)
-      .setDepth(-1);
-
-    return topY + cardHeight;
+    return rows;
   }
 }

@@ -1,0 +1,84 @@
+/* Grotesco Surreal — variáveis do design system (Borges e as Baratas). Gerado de tokens.json. */
+
+@font-face { font-family: "Luckiest Guy"; src: url("/assets/fonts/LuckiestGuy-Regular.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Baloo 2"; src: url("/assets/fonts/Baloo2-500.woff2") format("woff2"); font-weight: 500; font-style: normal; font-display: swap; }
+@font-face { font-family: "Baloo 2"; src: url("/assets/fonts/Baloo2-600.woff2") format("woff2"); font-weight: 600; font-style: normal; font-display: swap; }
+@font-face { font-family: "Baloo 2"; src: url("/assets/fonts/Baloo2-700.woff2") format("woff2"); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: "Baloo 2"; src: url("/assets/fonts/Baloo2-800.woff2") format("woff2"); font-weight: 800; font-style: normal; font-display: swap; }
+
+:root {
+  --cor-traco: #1b1b1b;
+  --cor-branco: #ffffff;
+  --cor-creme: #fcebaa;
+  --cor-rosa: #f6c9c9;
+  --cor-magenta: #d9579b;
+  --cor-magenta-escuro: #b8387a;
+  --cor-vermelho: #c73a1f;
+  --cor-vermelho-escuro: #9e2c16;
+  --cor-laranja: #e8512a;
+  --cor-ceu: #9ed3e6;
+  --cor-limao: #cfd62a;
+  --cor-limao-claro: #dde34f;
+  --cor-limao-escuro: #a9af1e;
+  --cor-mato: #6db33f;
+  --cor-papel: #ede3c0;
+  --cor-cinza-quente: #7a7466;
+  --cor-legenda: #4a4540;
+  --sobreposicao: rgba(27, 27, 27, 0.55);
+  --sombra-chao: rgba(27, 27, 27, 0.18);
+  --font-display: "Luckiest Guy", cursive;
+  --font-texto: "Baloo 2", sans-serif;
+  /* spacing */
+  --espaco-4: 4px;
+  --espaco-8: 8px;
+  --espaco-12: 12px;
+  --espaco-16: 16px;
+  --espaco-24: 24px;
+  --espaco-32: 32px;
+  --espaco-48: 48px;
+  --hud-lateral: 20px;
+  /* radius */
+  --raio-pilula: 999px;
+  --raio-circulo: 50%;
+  /* forma */
+  --raio-bolha-a: 40% 60% 55% 45% / 55% 45% 60% 40%;
+  --raio-bolha-b: 45% 55% 50% 50% / 60% 45% 55% 40%;
+  --raio-bolha-pressionada: 50% 50% 45% 55% / 45% 55% 50% 50%;
+  --raio-bolha-pressionada-b: 50% 50% 55% 45% / 50% 50% 45% 55%;
+  --raio-cartao: 28px 36px 30px 40px / 34px 28px 40px 30px;
+  --raio-painel: 36px 52px 40px 56px / 48px 36px 56px 40px;
+  --raio-amostra: 18px 26px 20px 28px / 24px 18px 28px 20px;
+  /* shadow */
+  --sombra-pressionado: 1px 1px 0 #1b1b1b;
+  --sombra-p: 3px 3px 0 #1b1b1b;
+  --sombra-m: 4px 4px 0 #1b1b1b;
+  --sombra-g: 5px 5px 0 #1b1b1b;
+  --sombra-painel: 6px 6px 0 #1b1b1b;
+  --sombra-hover: 7px 7px 0 #1b1b1b;
+  /* traco */
+  --traco-ui: 3px;
+  --traco-arte: 3.5px;
+  --traco-detalhe: 2px;
+  /* tamanho */
+  --tela-largura: 960px;
+  --tela-altura: 540px;
+  --toque-minimo: 44px;
+  --botao-icone: 52px;
+  --icone-botao: 26px;
+  --pilha-botao-min: 280px;
+  --nivel-bolha: 34px;
+  --alternar-largura: 84px;
+  --alternar-altura: 42px;
+  --seletor-seta: 38px;
+  --seletor-valor-min: 140px;
+  --energia-largura: 220px;
+  --energia-altura: 28px;
+  --selo-combo: 84px;
+  --balao-max: 360px;
+  --painel-pausa: 380px;
+  --cartao-resultado: 400px;
+  --painel-opcoes: 560px;
+  --cursor-pata: 56px;
+  --barata: 64px;
+  --folga-clique: 6px;
+}

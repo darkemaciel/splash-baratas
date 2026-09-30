@@ -1,0 +1,233 @@
+/* Grotesco Surreal — estilos dos componentes. Tudo sobre var(--token) de tokens.css. */
+
+.gs-botao {
+  display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box;
+  min-height: var(--toque-minimo);
+  font-family: var(--font-display); font-weight: 400; line-height: 1.1; white-space: nowrap;
+  text-transform: uppercase; text-decoration: none; text-align: center;
+  border: var(--traco-ui) solid var(--cor-traco);
+  cursor: pointer;
+  transition: transform 90ms ease-out, box-shadow 90ms ease-out, background-color 90ms ease-out;
+}
+.gs-botao--g { font-size: 34px; padding: 16px 44px; box-shadow: var(--sombra-g); }
+.gs-botao--m { font-size: 22px; padding: 12px 28px; box-shadow: var(--sombra-m); }
+.gs-botao--p { font-size: 17px; padding: 9px 20px; box-shadow: var(--sombra-p); }
+.gs-botao--pilha { min-width: var(--pilha-botao-min); }
+.gs-bolha-a { border-radius: var(--raio-bolha-a); }
+.gs-bolha-b { border-radius: var(--raio-bolha-b); }
+
+.gs-botao--primario { background: var(--cor-vermelho); color: var(--cor-branco); --gs-giro: -3deg; }
+.gs-botao--secundario { background: var(--cor-limao); color: var(--cor-traco); --gs-giro: 3deg; }
+.gs-botao--terciario { background: var(--cor-branco); color: var(--cor-traco); --gs-giro: -2deg; }
+
+.gs-botao { transform: rotate(var(--gs-base, 0deg)); }
+
+.gs-botao--primario:hover:not(:disabled), .gs-botao--primario.gs-is-hover { background: var(--cor-magenta-escuro); }
+.gs-botao--secundario:hover:not(:disabled), .gs-botao--secundario.gs-is-hover { background: var(--cor-limao-claro); }
+.gs-botao--terciario:hover:not(:disabled), .gs-botao--terciario.gs-is-hover { background: var(--cor-creme); }
+.gs-botao:hover:not(:disabled), .gs-botao.gs-is-hover {
+  box-shadow: var(--sombra-hover);
+  transform: translate(-3px, -3px) rotate(var(--gs-giro));
+}
+
+.gs-botao--primario:active:not(:disabled), .gs-botao--primario.gs-is-pressionado { background: var(--cor-vermelho-escuro); }
+.gs-botao--secundario:active:not(:disabled), .gs-botao--secundario.gs-is-pressionado { background: var(--cor-limao-escuro); }
+.gs-botao--terciario:active:not(:disabled), .gs-botao--terciario.gs-is-pressionado { background: var(--cor-papel); }
+.gs-botao:active:not(:disabled), .gs-botao.gs-is-pressionado {
+  box-shadow: var(--sombra-pressionado);
+  transform: translate(3px, 3px) scaleY(0.92);
+}
+.gs-bolha-a:active:not(:disabled), .gs-bolha-a.gs-is-pressionado { border-radius: var(--raio-bolha-pressionada); }
+.gs-bolha-b:active:not(:disabled), .gs-bolha-b.gs-is-pressionado { border-radius: var(--raio-bolha-pressionada-b); }
+
+.gs-botao:disabled, .gs-botao.gs-is-desabilitado {
+  background: var(--cor-papel); color: var(--cor-cinza-quente);
+  border: var(--traco-ui) dashed var(--cor-cinza-quente);
+  box-shadow: none; cursor: not-allowed; transform: rotate(var(--gs-base, 0deg));
+}
+
+.gs-botao:focus-visible, .gs-botao-icone:focus-visible, .gs-nivel__bolha:focus-visible,
+.gs-alternar:focus-visible, .gs-seletor__seta:focus-visible {
+  outline: var(--traco-ui) solid var(--cor-traco); outline-offset: 4px;
+}
+
+/* Botão de ícone */
+.gs-botao-icone {
+  width: var(--botao-icone); height: var(--botao-icone); box-sizing: border-box; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: var(--raio-circulo); background: var(--cor-branco);
+  border: var(--traco-ui) solid var(--cor-traco); box-shadow: var(--sombra-p);
+  color: var(--cor-traco); cursor: pointer;
+  transition: transform 90ms ease-out, box-shadow 90ms ease-out, background-color 90ms ease-out;
+}
+.gs-botao-icone:hover:not(:disabled), .gs-botao-icone.gs-is-hover {
+  background: var(--cor-creme); box-shadow: var(--sombra-painel); transform: translate(-3px, -3px) rotate(-8deg);
+}
+.gs-botao-icone:active:not(:disabled), .gs-botao-icone.gs-is-pressionado {
+  background: var(--cor-papel); box-shadow: var(--sombra-pressionado); transform: translate(2px, 2px);
+}
+.gs-botao-icone.gs-is-ativo { background: var(--cor-creme); box-shadow: var(--sombra-pressionado); transform: none; }
+.gs-botao-icone:disabled, .gs-botao-icone.gs-is-desabilitado {
+  background: var(--cor-papel); border-style: dashed; border-color: var(--cor-cinza-quente);
+  color: var(--cor-cinza-quente); box-shadow: none; cursor: not-allowed; transform: none;
+}
+.gs-icone { display: block; flex-shrink: 0; }
+
+/* HUD */
+.gs-pilula {
+  display: inline-flex; align-items: center; box-sizing: border-box;
+  background: var(--cor-branco); border: var(--traco-ui) solid var(--cor-traco);
+  border-radius: var(--raio-pilula); box-shadow: var(--sombra-p); white-space: nowrap;
+}
+.gs-hud-texto { font-family: var(--font-display); font-size: 22px; line-height: 1.2; }
+.gs-hud-pontos { padding: 6px 18px; color: var(--cor-vermelho); }
+.gs-hud-vidas { padding: 7px 14px; gap: 6px; }
+.gs-hud-tempo { padding: 6px 18px 6px 12px; gap: 8px; background: var(--cor-creme); color: var(--cor-traco); }
+.gs-hud { display: flex; justify-content: space-between; align-items: center; }
+.gs-hud__grupo { display: flex; gap: var(--espaco-12); align-items: center; }
+
+.gs-energia { display: inline-flex; flex-direction: column; gap: 6px; }
+.gs-energia__rotulo { font-family: var(--font-texto); font-size: 14px; font-weight: 800; color: var(--cor-traco); }
+.gs-energia__trilho {
+  width: var(--energia-largura); height: var(--energia-altura); box-sizing: border-box; padding: 3px; display: flex;
+  background: var(--cor-branco); border: var(--traco-ui) solid var(--cor-traco);
+  border-radius: var(--raio-pilula); box-shadow: var(--sombra-p);
+}
+.gs-energia__preenchimento { border-radius: var(--raio-pilula); background: var(--cor-magenta); }
+
+/* Selo de combo */
+.gs-selo { position: relative; width: var(--selo-combo); height: var(--selo-combo); flex-shrink: 0; display: inline-block; }
+.gs-selo svg { position: absolute; inset: 0; }
+.gs-selo__texto {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-size: 26px; line-height: 1; color: var(--cor-traco); transform: rotate(-8deg);
+}
+
+/* Controles */
+.gs-nivel { display: inline-flex; gap: var(--espaco-8); }
+.gs-nivel__bolha {
+  width: var(--nivel-bolha); height: var(--nivel-bolha); box-sizing: border-box; padding: 0;
+  background: var(--cor-branco); border: var(--traco-ui) solid var(--cor-traco);
+  border-radius: var(--raio-bolha-a); box-shadow: var(--sombra-p); cursor: pointer;
+}
+.gs-nivel__bolha.gs-is-cheia { background: var(--cor-vermelho); }
+
+.gs-alternar {
+  width: var(--alternar-largura); height: var(--alternar-altura); box-sizing: border-box; padding: 0 5px;
+  display: inline-flex; flex-direction: row-reverse; align-items: center; justify-content: space-between;
+  background: var(--cor-branco); border: var(--traco-ui) solid var(--cor-traco);
+  border-radius: var(--raio-pilula); box-shadow: var(--sombra-p); cursor: pointer;
+}
+.gs-alternar[aria-pressed="true"] { flex-direction: row; background: var(--cor-limao); }
+.gs-alternar__texto { margin: 0 6px; font-family: var(--font-display); font-size: 16px; line-height: 1; color: var(--cor-traco); }
+.gs-alternar__bola {
+  width: 28px; height: 28px; box-sizing: border-box; border-radius: var(--raio-circulo);
+  background: var(--cor-papel); border: var(--traco-ui) solid var(--cor-traco);
+}
+.gs-alternar[aria-pressed="true"] .gs-alternar__bola { background: var(--cor-branco); }
+
+.gs-seletor { display: inline-flex; gap: var(--espaco-8); align-items: center; }
+.gs-seletor__seta {
+  width: var(--seletor-seta); height: var(--seletor-seta); box-sizing: border-box; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: var(--raio-circulo); background: var(--cor-branco);
+  border: var(--traco-ui) solid var(--cor-traco); box-shadow: var(--sombra-p); cursor: pointer;
+}
+.gs-seletor__valor {
+  min-width: var(--seletor-valor-min); box-sizing: border-box; text-align: center;
+  background: var(--cor-branco); border: var(--traco-ui) solid var(--cor-traco);
+  border-radius: var(--raio-pilula); padding: 4px 16px;
+  font-family: var(--font-texto); font-size: 16px; font-weight: 800; line-height: 1.5; color: var(--cor-traco);
+}
+
+/* Painel e diálogo */
+.gs-painel {
+  position: relative; box-sizing: border-box;
+  background: var(--cor-creme); color: var(--cor-traco);
+  border: var(--traco-ui) solid var(--cor-traco); border-radius: var(--raio-painel);
+  box-shadow: var(--sombra-painel); padding: 26px 32px 30px;
+  display: flex; flex-direction: column; gap: var(--espaco-16); align-items: center;
+  font-family: var(--font-texto);
+}
+.gs-painel__titulo { margin: 0 0 4px; font-family: var(--font-display); font-weight: 400; font-size: 44px; line-height: 1; transform: rotate(-3deg); }
+.gs-painel--dialogo { padding: 22px 28px; gap: 10px; text-align: center; }
+.gs-painel--dialogo .gs-painel__titulo { font-size: 28px; line-height: 1.1; margin: 0; transform: rotate(-2deg); }
+.gs-painel__texto { margin: 0; font-size: 16px; font-weight: 600; line-height: 1.4; }
+.gs-painel__acoes { display: flex; gap: 14px; margin-top: 4px; }
+.gs-painel__fechar { position: absolute; top: -16px; right: -16px; }
+.gs-sobreposicao { background: var(--sobreposicao); display: flex; align-items: center; justify-content: center; }
+
+.gs-linha-ajuste {
+  width: 100%; display: flex; justify-content: space-between; align-items: center; min-height: var(--toque-minimo);
+  border-top: var(--traco-detalhe) dashed var(--cor-traco); padding-top: 6px;
+}
+.gs-linha-ajuste:first-of-type { border-top: 0; padding-top: 0; }
+.gs-linha-ajuste__rotulo { font-family: var(--font-texto); font-size: 19px; font-weight: 800; }
+
+/* Balão de dica */
+.gs-balao {
+  position: relative; display: inline-block; max-width: var(--balao-max); box-sizing: border-box;
+  background: var(--cor-branco); color: var(--cor-traco);
+  border: var(--traco-ui) solid var(--cor-traco); border-radius: var(--raio-cartao);
+  box-shadow: var(--sombra-m); padding: 12px 18px;
+  font-family: var(--font-texto); font-size: 16px; font-weight: 700; line-height: 1.4;
+}
+.gs-balao__prefixo { font-family: var(--font-display); font-weight: 400; font-size: 18px; color: var(--cor-vermelho); }
+.gs-balao__rabicho { position: absolute; left: 32px; bottom: -22px; }
+
+/* Título com contorno e pontuação flutuante */
+.gs-titulo-contorno {
+  display: inline-block; margin: 0; font-family: var(--font-display); font-weight: 400;
+  font-size: 52px; line-height: 1; color: var(--cor-branco); text-transform: uppercase;
+  text-shadow:
+    4px 0 0 var(--cor-traco), -4px 0 0 var(--cor-traco), 0 4px 0 var(--cor-traco), 0 -4px 0 var(--cor-traco),
+    3px 3px 0 var(--cor-traco), -3px -3px 0 var(--cor-traco), 3px -3px 0 var(--cor-traco), -3px 3px 0 var(--cor-traco),
+    7px 7px 0 var(--cor-traco);
+}
+.gs-pontuacao {
+  display: inline-block; font-family: var(--font-display); font-size: 40px; line-height: 1.1; color: var(--cor-branco);
+  text-shadow:
+    3px 0 0 var(--cor-traco), -3px 0 0 var(--cor-traco), 0 3px 0 var(--cor-traco), 0 -3px 0 var(--cor-traco),
+    2px 2px 0 var(--cor-traco), -2px -2px 0 var(--cor-traco), 2px -2px 0 var(--cor-traco), -2px 2px 0 var(--cor-traco),
+    5px 5px 0 var(--cor-traco);
+  transform: rotate(8deg);
+}
+.gs-pontuacao--animar { animation: gs-sobe 720ms ease-out forwards; }
+@keyframes gs-sobe {
+  from { transform: translateY(0) rotate(8deg); opacity: 1; }
+  to { transform: translateY(-48px) rotate(8deg); opacity: 0; }
+}
+
+/* Cartão de resultado */
+.gs-resultado { width: var(--cartao-resultado); padding: 20px 28px; gap: 12px; }
+.gs-resultado__estrelas { display: flex; gap: 8px; align-items: flex-end; }
+.gs-resultado__estrela--meio { margin-bottom: 8px; }
+.gs-resultado__linhas { width: 100%; display: flex; flex-direction: column; }
+.gs-resultado__linha { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; }
+.gs-resultado__linha + .gs-resultado__linha { border-top: var(--traco-detalhe) dashed var(--cor-traco); }
+.gs-resultado__rotulo { font-family: var(--font-texto); font-size: 17px; font-weight: 800; letter-spacing: 0.06em; }
+.gs-resultado__valor { font-family: var(--font-display); font-size: 30px; line-height: 1; }
+.gs-resultado__valor--pontos { color: var(--cor-vermelho); }
+
+/* Personagem */
+.gs-personagem { display: inline-block; }
+.gs-personagem--sombra { position: relative; }
+
+@media (prefers-reduced-motion: reduce) {
+  .gs-botao, .gs-botao-icone { transition: none; }
+  .gs-botao:hover:not(:disabled), .gs-botao-icone:hover:not(:disabled) { transform: rotate(var(--gs-base, 0deg)); }
+  .gs-pontuacao--animar { animation: none; }
+}
+
+/* Movimento: barata e pata (sprites do jogo) */
+.gs-barata { position: relative; display: inline-block; flex-shrink: 0; }
+.gs-barata__corpo { position: absolute; inset: 0; display: block; will-change: transform; }
+.gs-barata__sprite { position: absolute; inset: 0; display: block; background-repeat: no-repeat; background-position: 0 0; }
+.gs-barata--eliminada .gs-barata__corpo { animation: gs-barata-cai 200ms linear forwards; }
+@keyframes gs-barata-cai { to { translate: 0 40px; opacity: 0; } }
+@keyframes gs-quadros-andando { from { background-position: 0% 0; } to { background-position: 100% 0; } }
+@keyframes gs-quadros-voando { from { background-position: 0% 0; } to { background-position: 100% 0; } }
+
+.gs-area-pata { position: relative; overflow: hidden; cursor: none; touch-action: none; }
+.gs-area-pata * { cursor: none; }
+.gs-pata { position: absolute; left: 0; top: 0; width: auto; pointer-events: none; user-select: none; opacity: 0; will-change: transform; }

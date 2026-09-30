@@ -1,18 +1,22 @@
 <!--
 Sync Impact Report
-- Version change: 1.0.0 → 1.1.0
-- Rationale for MINOR: Added a new principle (VIII); no existing principle was removed or
-  redefined incompatibly.
-- Modified principles: n/a
-- Added sections:
-  - Core Principle VIII (Confirmação prévia para mudanças críticas) — governs actions the AI
-    assistant (Claude Code) may take in this repo, requiring explicit user confirmation before
-    any critical/destructive/hard-to-reverse operation.
+- Version change: 1.1.0 → 1.2.0
+- Rationale for MINOR: material expansion of Principle VI (new sanctioned asset folder
+  `client/public/assets/ui/` for interface icons/illustrations of the design system); no principle
+  removed or redefined incompatibly.
+- Modified principles:
+  - VI. Assets versionados e organizados desde o início — convenção de pastas passa a incluir
+    `/ui` (ícones e ilustrações de interface), com subpastas por tipo.
+- Added sections: none
 - Removed sections: none
+- Compatibility check of active specs/plans:
+  - specs/017-design-system-grotesco — plan.md deixa de precisar justificar `assets/ui/` em
+    Complexity Tracking (agora conforme).
+  - specs/001–016 — não usam `assets/ui/`; sem impacto.
 - Templates checked for alignment:
-  - .specify/templates/plan-template.md — still not present in repo; no action taken (n/a)
-  - .specify/templates/tasks-template.md — still not present in repo; no action taken (n/a)
-  - .specify/templates/spec-template.md — still not present in repo; no action taken (n/a)
+  - .specify/templates/plan-template.md — sem referência a pastas de assets; nenhuma ação.
+  - .specify/templates/tasks-template.md — idem.
+  - .specify/templates/spec-template.md — idem.
 - Follow-up TODOs: none
 -->
 
@@ -65,8 +69,10 @@ para detecção de clique.
 lag ou dessincronia quebra a jogabilidade central do jogo.
 
 ### VI. Assets versionados e organizados desde o início
-Sprites, sons e fontes — mesmo arte placeholder — DEVEM seguir a estrutura de pastas definida
-(`client/public/assets/sprites`, `/audio`, `/fonts`). Nenhum arquivo solto fora dessa convenção.
+Sprites, sons, fontes e assets de interface — mesmo arte placeholder — DEVEM seguir a estrutura
+de pastas definida (`client/public/assets/sprites`, `/audio`, `/fonts`, `/ui`). `/ui` guarda
+ícones e ilustrações de interface do design system, organizados em subpastas por tipo (ex.:
+`ui/icones`, `ui/personagem`). Nenhum arquivo solto fora dessa convenção.
 
 **Rationale**: manter a convenção desde o início evita retrabalho de reorganização quando arte
 final substituir os placeholders.
@@ -116,4 +122,4 @@ acima. Complexidade que viole a Simplicidade Deliberada (Princípio IV) ou arris
 Responsividade do Clique (Princípio V) DEVE ser justificada explicitamente na spec/plan
 correspondente ou rejeitada.
 
-**Version**: 1.1.0 | **Ratified**: 2026-09-12 | **Last Amended**: 2026-09-26
+**Version**: 1.2.0 | **Ratified**: 2026-09-12 | **Last Amended**: 2026-09-28

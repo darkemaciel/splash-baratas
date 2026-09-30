@@ -5,15 +5,17 @@ import {
   GAME_HEIGHT,
   GAME_WIDTH,
 } from "../config/gameConfig";
+import { MOVIMENTO } from "../config/theme";
 
 type CursorAnimationState = "idle" | "strike";
 
 // specs/015-cursor-pata-animada (revisado a pedido do usuário, 2026-09-26): a pata não tem mais um
 // balanço automático contínuo — ela fica parada e só inclina levemente na direção real do
 // movimento do ponteiro, voltando a 0° assim que ele para.
-const LEAN_MAX_DEG = 15;
-const LEAN_FACTOR = 0.15;
-const LEAN_SMOOTHING = 0.25; // fração da distância até o ângulo-alvo percorrida por frame
+// specs/017-design-system-grotesco (FR-007): valores de MOVIMENTO.pata (fonte única), iguais aos de antes.
+const LEAN_MAX_DEG = MOVIMENTO.pata.inclinacaoMaxDeg;
+const LEAN_FACTOR = MOVIMENTO.pata.fatorInclinacao;
+const LEAN_SMOOTHING = MOVIMENTO.pata.suavizacao; // fração da distância até o ângulo-alvo percorrida por frame
 const MOVEMENT_DEADZONE_PX = 0.5;
 // orientação de repouso da arte (garras para cima) em graus "matemáticos" (0° = direita, sentido
 // anti-horário) — usada para que mover na direção que a pata já "encara" (para cima) não incline
@@ -121,8 +123,8 @@ export class CursorScene extends Phaser.Scene {
     this.paw.setAngle(0).setScale(this.baseScale);
     this.strikeTween = this.tweens.add({
       targets: this.paw,
-      angle: -25,
-      scale: this.baseScale * 1.25,
+      angle: MOVIMENTO.pata.golpeAnguloDeg,
+      scale: this.baseScale * MOVIMENTO.pata.golpeEscala,
       duration: CURSOR_STRIKE_DURATION_MS / 2,
       yoyo: true,
       ease: "Quad.easeOut",

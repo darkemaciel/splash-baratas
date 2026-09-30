@@ -1,0 +1,28 @@
+<!-- @dsCard group="Ações" height=460 -->
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+body{margin:0;background:var(--cor-creme);font-family:var(--font-texto);color:var(--cor-traco)}
+.w{padding:28px 32px 40px;display:flex;flex-wrap:wrap;gap:28px 36px;align-items:center}
+.col{display:flex;flex-direction:column;gap:8px;align-items:center}
+.leg{font-size:13px;font-weight:700;color:var(--cor-legenda)}
+.grade{display:grid;grid-template-columns:110px repeat(4,1fr);gap:22px 20px;align-items:center;justify-items:center;width:100%}.grade .leg{justify-self:start}
+</style></head><body><div id="root"></div>
+<script>
+var h=React.createElement, G=window.GrotescoSurreal;
+function Leg(t,el){return h("div",{className:"col"},el,h("span",{className:"leg"},t));}
+ReactDOM.createRoot(document.getElementById("root")).render(
+h("div",{className:"w"},
+ h("div",{className:"grade"},
+  h("span"),h("span",{className:"leg"},"NORMAL"),h("span",{className:"leg"},"HOVER"),h("span",{className:"leg"},"PRESSIONADO"),h("span",{className:"leg"},"DESABILITADO"),
+  ["primario","secundario","terciario"].map(function(v){
+   var t={primario:"JOGAR",secundario:"OPÇÕES",terciario:"VOLTAR"}[v];
+   return [h("span",{key:v+"l",className:"leg"},{primario:"Primário",secundario:"Secundário",terciario:"Terciário"}[v]),
+    ["normal","hover","pressionado","desabilitado"].map(function(e){return h(G.Botao,{key:v+e,variante:v,estado:e},t);})];
+  })),
+ Leg("G · 34 · ação principal",h(G.Botao,{tamanho:"G"},"JOGAR")),
+ Leg("M · 22 · menus e painéis",h(G.Botao,{tamanho:"M"},"JOGAR")),
+ Leg("P · 17 · diálogos",h(G.Botao,{tamanho:"P"},"JOGAR")),
+ Leg("Vizinhos alternam bolha B / A",h("div",{style:{display:"flex",gap:18}},h(G.Botao,{variante:"secundario"},"AGARRA!"),h(G.Botao,{tamanho:"G"},"PULA!")))
+)
+);
+</script></body></html>

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-"Baratas na Geladeira" — a browser game where cockroaches spawn and move toward specific food items on fridge shelves; the player clicks roaches to eliminate them before they reach their target food. See `prd.md` for the full product spec (in Portuguese). Key constraints from the PRD:
+"Borges e as Baratas" (formerly "Baratas na Geladeira"; renamed in `specs/017-design-system-grotesco`) — a browser game where cockroaches spawn and move toward specific food items on fridge shelves; the player clicks roaches to eliminate them before they reach their target food. See `prd.md` for the full product spec (in Portuguese). Key constraints from the PRD:
 
 - **MVP scope**: single loss condition (all food items stolen), no scoring, no progressive difficulty, no backend — all match state lives client-side.
 - **Stack**: TypeScript + Phaser 4, Bun as package manager/runtime, Vite for bundling, static deploy target (Vercel).
@@ -20,8 +20,12 @@ Technical principles are ratified in `.specify/memory/constitution.md` (7 princi
 - `client/src/systems/` — `MatchStateManager` (spawn/steal/eliminate/restart, `EventTarget`-based pub-sub) and `CollisionSystem` (direct geometry hit-testing, no physics engine)
 - `client/src/scenes/` — `BootScene`, `StartScene`, `GameScene`, `GameOverScene` (Phaser), the only consumers of `systems/`
 - `client/src/config/gameConfig.ts` — fixed constants (spawn interval, travel duration, hitbox padding, shelf/food counts)
+- `client/src/config/theme.ts` — single source of design tokens (colors, fonts, text sizes, spacing, stroke, shadows, radii, motion timings) from the "Grotesco Surreal" design system; scenes and `ui/` never use literal colors/fonts/sizes
+- `client/src/ui/` — canvas UI kit (button, icon button, HUD pill, risk bar, panel, outlined title, result card) that mirrors the design system inside Phaser, consumed only by `scenes/`. Pure helpers `ui/shape.ts` and `ui/format.ts` have no `phaser` import and are unit-tested. Accessible labels/keyboard focus come from visually hidden DOM proxies in `#ui-a11y` (`ui/a11y.ts`) — never a visible DOM layer, because the paw cursor is drawn in the canvas
 - `client/tests/unit/` — `bun test` suite covering the domain layer in isolation
-- Placeholder sprites in `client/public/assets/sprites/`
+- Placeholder sprites in `client/public/assets/sprites/`; design system fonts in `client/public/assets/fonts/` and icons/character in `client/public/assets/ui/` (sanctioned by constitution v1.2.0, Principle VI)
+
+**Design system**: reference in `docs/borges-design-system/` (`LEIA-ME.md` + `design-system/README.md`). Applied to every existing screen by `specs/017-design-system-grotesco`; its pieces not yet in the game are tracked in `backlog.md` §8.
 
 Any new feature (progressive difficulty, scoring, sound, HUD, etc. — tracked in `backlog.md`) should land as a **new spec** via `/speckit-specify`, not a retroactive edit to `specs/001-roach-fridge-clicker/`, per constitution Principle IV.
 

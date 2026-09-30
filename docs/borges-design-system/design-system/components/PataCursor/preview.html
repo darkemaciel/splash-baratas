@@ -1,0 +1,27 @@
+<!-- @dsCard group="Movimento" height=320 -->
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+body{margin:0;background:var(--cor-creme);font-family:var(--font-texto);color:var(--cor-traco)}
+.area{height:320px;background:var(--cor-ceu)}
+.chao{position:absolute;left:0;right:0;bottom:-80px;height:190px;background:var(--cor-limao);border-top:3px solid var(--cor-traco);transform:skewY(-3deg);transform-origin:left bottom}
+.dica{position:absolute;left:24px;top:20px}
+.b{position:absolute}
+.hud{position:absolute;right:20px;top:16px}
+</style></head><body><div id="root"></div>
+<script>
+var h=React.createElement, G=window.GrotescoSurreal;
+var POS=[{x:220,y:150,m:"andando",d:"direita"},{x:470,y:90,m:"voando",d:"esquerda"},{x:700,y:170,m:"andando",d:"esquerda"}];
+function Demo(){
+  var s=React.useState([false,false,false]), pts=React.useState(0), mortas=s[0];
+  function acerta(i){ if(mortas[i])return; var n=mortas.slice(); n[i]=true; s[1](n); pts[1](pts[0]+100);
+    setTimeout(function(){ s[1](function(a){var b=a.slice(); b[i]=false; return b;}); },1200); }
+  return h(G.PataCursor,{className:"area"},
+    h("div",{className:"chao"}),
+    h("div",{className:"dica"},h(G.BalaoDica,null,"passe o mouse: a pata inclina na direção do movimento. Clique para dar o tapa.")),
+    h("div",{className:"hud"},h(G.HudPontos,{pontos:pts[0]})),
+    POS.map(function(p,i){return h("div",{key:i,className:"b",style:{left:p.x,top:p.y+60},onPointerDown:function(){acerta(i);}},
+      h(G.Barata,{modo:p.m,direcao:p.d,tamanho:72,eliminada:mortas[i],fase:i*2}));})
+  );
+}
+ReactDOM.createRoot(document.getElementById("root")).render(h(Demo));
+</script></body></html>

@@ -1,0 +1,20 @@
+<!-- @dsCard group="Painéis" height=500 -->
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+body{margin:0;background:var(--cor-ceu);font-family:var(--font-texto);color:var(--cor-traco)}
+.w{padding:36px 48px 44px;display:flex;flex-wrap:wrap;gap:24px;align-items:center}
+.col{display:flex;flex-direction:column;gap:8px;align-items:center}
+.leg{font-size:13px;font-weight:700;color:var(--cor-legenda)}
+.w{justify-content:center}
+</style></head><body><div id="root"></div>
+<script>
+var h=React.createElement, G=window.GrotescoSurreal;
+function Leg(t,el){return h("div",{className:"col"},el,h("span",{className:"leg"},t));}
+ReactDOM.createRoot(document.getElementById("root")).render(
+h("div",{className:"w"},h(G.Painel,{titulo:"PAUSADO",largura:380},
+  h(G.Botao,{pilha:true},"CONTINUAR"),h(G.Botao,{variante:"secundario",pilha:true},"REINICIAR"),h(G.Botao,{variante:"terciario",pilha:true},"ENCERRAR PARTIDA")),
+ h(G.Painel,{titulo:"OPÇÕES",largura:420,rotacaoTitulo:-2,onFechar:function(){},style:{alignItems:"stretch",gap:8,padding:"22px 36px 26px"}},
+  h("div",{className:"gs-linha-ajuste"},h("span",{className:"gs-linha-ajuste__rotulo"},"Música"),h(G.Nivel,{valorInicial:4,rotulo:"Música"})),
+  h("div",{className:"gs-linha-ajuste"},h("span",{className:"gs-linha-ajuste__rotulo"},"Vibração"),h(G.Alternar,{ligadoInicial:true,rotulo:"Vibração"}))))
+);
+</script></body></html>

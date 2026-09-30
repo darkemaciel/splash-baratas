@@ -1,0 +1,16 @@
+<!-- @dsCard group="Feedback" height=170 -->
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+body{margin:0;background:var(--cor-ceu);font-family:var(--font-texto);color:var(--cor-traco)}
+.w{padding:28px 32px 48px;display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start}
+.col{display:flex;flex-direction:column;gap:8px;align-items:center}
+.leg{font-size:13px;font-weight:700;color:var(--cor-legenda)}
+
+</style></head><body><div id="root"></div>
+<script>
+var h=React.createElement, G=window.GrotescoSurreal;
+function Leg(t,el){return h("div",{className:"col"},el,h("span",{className:"leg"},t));}
+ReactDOM.createRoot(document.getElementById("root")).render(
+h("div",{className:"w"},h(G.BalaoDica,null,"toque em PULA! para saltar e em AGARRA! para somar pontos."))
+);
+</script></body></html>

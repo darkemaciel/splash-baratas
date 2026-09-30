@@ -1,0 +1,16 @@
+<!-- @dsCard group="Painéis" height=420 -->
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+body{margin:0;background:var(--cor-ceu);font-family:var(--font-texto);color:var(--cor-traco)}
+.w{padding:32px 48px 44px;display:flex;flex-wrap:wrap;gap:24px;align-items:center}
+.col{display:flex;flex-direction:column;gap:8px;align-items:center}
+.leg{font-size:13px;font-weight:700;color:var(--cor-legenda)}
+.w{justify-content:center}
+</style></head><body><div id="root"></div>
+<script>
+var h=React.createElement, G=window.GrotescoSurreal;
+function Leg(t,el){return h("div",{className:"col"},el,h("span",{className:"leg"},t));}
+ReactDOM.createRoot(document.getElementById("root")).render(
+h("div",{className:"w"},h(G.CartaoResultado,{estrelas:2,pontos:1250,recorde:3400}))
+);
+</script></body></html>
